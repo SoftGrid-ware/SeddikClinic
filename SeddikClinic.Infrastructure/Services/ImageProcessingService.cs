@@ -1,8 +1,5 @@
 using SeddikClinic.Core.Interfaces;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace SeddikClinic.Infrastructure.Services;
 
@@ -11,7 +8,7 @@ public class ImageProcessingService : IImageProcessingService
     private const int MaxDimension = 2048; // الحد الأقصى للأبعاد
     private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 ميجابايت كحد أقصى للمرفق
 
-    public async Task<(byte[] ProcessedData, string ContentType)> CompressAndOptimizeImageAsync(
+    public Task<(byte[] ProcessedData, string ContentType)> CompressAndOptimizeImageAsync(
         Stream inputStream, 
         string originalFileName, 
         string contentType)
@@ -26,68 +23,66 @@ public class ImageProcessingService : IImageProcessingService
             originalFileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
         {
             using var pdfMs = new MemoryStream();
-            await inputStream.CopyToAsync(pdfMs);
-            return (pdfMs.ToArray(), "application/pdf");
+            inputStream.CopyTo(pdfMs);
+            return Task.FromResult((pdfMs.ToArray(), "application/pdf"));
         }
 
         try
         {
             inputStream.Position = 0;
-            using var image = await Image.LoadAsync(inputStream);
-
-            // تصغير الأبعاد في حال كانت الصورة فائقة الضخامة
-            if (image.Width > MaxDimension || image.Height > MaxDimension)
+            using var originalBitmap = SKBitmap.Decode(inputStream);
+            if (originalBitmap == null)
             {
-                image.Mutate(x => x.Resize(new ResizeOptions
-                {
-                    Size = new Size(MaxDimension, MaxDimension),
-                    Mode = ResizeMode.Max
-                }));
+                inputStream.Position = 0;
+                using var rawMs = new MemoryStream();
+                inputStream.CopyTo(rawMs);
+                return Task.FromResult((rawMs.ToArray(), contentType));
             }
 
-            using var outputStream = new MemoryStream();
-            
-            // ضغط بجودة ممتازة (82%) وتوفير كبير في المساحة
-            var encoder = new WebpEncoder
-            {
-                Quality = 82
-            };
-            await image.SaveAsync(outputStream, encoder);
+            int targetWidth = originalBitmap.Width;
+            int targetHeight = originalBitmap.Height;
 
-            return (outputStream.ToArray(), "image/webp");
+            // تصغير الأبعاد في حال كانت الصورة فائقة الضخامة
+            if (targetWidth > MaxDimension || targetHeight > MaxDimension)
+            {
+                float ratio = Math.Min((float)MaxDimension / targetWidth, (float)MaxDimension / targetHeight);
+                targetWidth = (int)(targetWidth * ratio);
+                targetHeight = (int)(targetHeight * ratio);
+            }
+
+            using var resizedBitmap = originalBitmap.Resize(new SKImageInfo(targetWidth, targetHeight), SKFilterQuality.Medium);
+            using var image = SKImage.FromBitmap(resizedBitmap ?? originalBitmap);
+            
+            // ضغط بجودة ممتازة (80%) وتوفير كبير في المساحة
+            using var encodedData = image.Encode(SKEncodedImageFormat.Jpeg, 80);
+            return Task.FromResult((encodedData.ToArray(), "image/jpeg"));
         }
         catch
         {
-            // في حال فشل قراءة الصورة كصورة قياسية، يتم إرجاع الملف كما هو
             inputStream.Position = 0;
             using var rawMs = new MemoryStream();
-            await inputStream.CopyToAsync(rawMs);
-            return (rawMs.ToArray(), contentType);
+            inputStream.CopyTo(rawMs);
+            return Task.FromResult((rawMs.ToArray(), contentType));
         }
     }
 
-    public async Task<byte[]> GenerateThumbnailAsync(Stream inputStream, int width = 200, int height = 200)
+    public Task<byte[]> GenerateThumbnailAsync(Stream inputStream, int width = 200, int height = 200)
     {
         try
         {
             inputStream.Position = 0;
-            using var image = await Image.LoadAsync(inputStream);
+            using var originalBitmap = SKBitmap.Decode(inputStream);
+            if (originalBitmap == null) return Task.FromResult(Array.Empty<byte>());
 
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(width, height),
-                Mode = ResizeMode.Crop
-            }));
+            using var resizedBitmap = originalBitmap.Resize(new SKImageInfo(width, height), SKFilterQuality.Low);
+            using var image = SKImage.FromBitmap(resizedBitmap ?? originalBitmap);
+            using var encodedData = image.Encode(SKEncodedImageFormat.Jpeg, 70);
 
-            using var outputStream = new MemoryStream();
-            var encoder = new WebpEncoder { Quality = 75 };
-            await image.SaveAsync(outputStream, encoder);
-
-            return outputStream.ToArray();
+            return Task.FromResult(encodedData.ToArray());
         }
         catch
         {
-            return Array.Empty<byte>();
+            return Task.FromResult(Array.Empty<byte>());
         }
     }
 }

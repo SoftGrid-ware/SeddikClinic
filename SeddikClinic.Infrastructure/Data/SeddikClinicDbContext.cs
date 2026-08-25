@@ -27,14 +27,6 @@ public class SeddikClinicDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // ضبط دقة الحقول المالية decimal(18, 2)
-        foreach (var property in modelBuilder.Model.GetEntityTypes()
-            .SelectMany(t => t.GetProperties())
-            .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
-        {
-            property.SetColumnType("decimal(18, 2)");
-        }
-
         // إعدادات ExpenseCategory
         modelBuilder.Entity<ExpenseCategory>(entity =>
         {
