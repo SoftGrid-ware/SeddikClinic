@@ -1,0 +1,6 @@
+@SeddikClinic.Api_HostAddress = http://localhost:5001
+
+GET {{SeddikClinic.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
