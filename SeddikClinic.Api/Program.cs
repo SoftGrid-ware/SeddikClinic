@@ -1,6 +1,9 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SeddikClinic.Api.BackgroundServices;
 using SeddikClinic.Api.Health;
 using SeddikClinic.Core.Interfaces;
@@ -9,18 +12,23 @@ using SeddikClinic.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. إعداد قاعدة البيانات (يدعم PostgreSQL سحابياً أو SQLite محلياً لسهولة التشغيل الفوري)
+// دعم منفذ السحابة المخصص
+var cloudPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(cloudPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{cloudPort}");
+}
+
+// 1. إعداد قاعدة البيانات (PostgreSQL سحابياً من Neon أو SQLite محلياً)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? builder.Configuration["DATABASE_URL"]
     ?? "Data Source=seddik_clinic_local.db";
 
-// إذا كان الاتصال محلياً بـ SQLite أو لا يحتوي على رابط postgres
 var isSqlite = connectionString.Contains(".db", StringComparison.OrdinalIgnoreCase) || 
                connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase);
 
 if (!isSqlite)
 {
-    // دعم صيغة postgres:// من Render/Fly.io/Neon تلقائياً
     if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || 
         connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
     {
@@ -48,7 +56,7 @@ else
     });
 }
 
-// 2. تسجيل الخدمات والطبقات المعمارية (Clean Architecture DI)
+// 2. تسجيل الخدمات والطبقات المعمارية
 builder.Services.AddScoped<IImageProcessingService, ImageProcessingService>();
 builder.Services.AddScoped<IFileStorageService, CloudflareR2StorageService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
@@ -56,14 +64,36 @@ builder.Services.AddScoped<IFinancialPeriodService, FinancialPeriodService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IFinancialReportService, FinancialReportService>();
 
-// 3. تسجيل الخدمة الخلفية الدورية للمصروفات الشهرية (Background Worker)
+// 3. خدمة المصروفات الشهرية التلقائية
 builder.Services.AddHostedService<RecurringExpensesWorker>();
 
-// 4. إعداد الفحص الصحي (Health Checks) للسيرفر وقاعدة البيانات والسحابة
+// 4. الفحص الصحي
 builder.Services.AddHealthChecks()
     .AddCheck<CloudServicesHealthCheck>("CloudAndDatabaseHealth");
 
-// 5. إعداد CORS للسماح بالاتصال من تطبيقات الويب وسطح المكتب والموبايل
+// 5. إعداد المصادقة والتفويض (JWT Authentication & Authorization)
+var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "A_VERY_LONG_SECRET_KEY_FOR_JWT_AUTHENTICATION_SEDDIC_CLINIC_2026_PRODUCTION";
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+builder.Services.AddAuthorization();
+
+// 6. إعداد CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -74,7 +104,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 6. تسجيل Controllers مع دعم تسلسل الـ Enums
+// 7. Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -83,7 +113,7 @@ builder.Services.AddControllers()
 
 var app = builder.Build();
 
-// إنشاء الجداول وبذر البيانات تلقائياً عند الإقلاع
+// إنشاء الجداول وبذر البيانات
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -94,17 +124,24 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "Could not initialize database automatically. Make sure the database provider is ready.");
+        logger.LogWarning(ex, "Could not initialize database automatically.");
     }
 }
 
 app.UseCors("AllowAll");
-app.UseStaticFiles(); // لدعم الملفات المرفوعة في وضع التطوير المحلي
+app.UseStaticFiles();
 
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 
-// نقاط فحص الاستيقاظ والصحة
+app.MapGet("/", () => Results.Ok(new 
+{ 
+    app = "Seddik Clinic Medical API", 
+    status = "Active", 
+    time = DateTime.UtcNow 
+}));
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -127,7 +164,6 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     }
 });
 
-// نقطة سريعة جداً للـ Keep-Alive Pings من cron-job.org
 app.MapGet("/liveness", () => Results.Ok(new { status = "Awake", utcTime = DateTime.UtcNow, message = "خادم عيادة صديق يعمل بكفاءة" }));
 
 app.MapControllers();
