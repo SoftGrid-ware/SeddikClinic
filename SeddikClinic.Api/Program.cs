@@ -211,6 +211,44 @@ using (var scope = app.Services.CreateScope())
                     ""DisplayOrder"" int NOT NULL DEFAULT 0,
                     ""CreatedAt"" timestamp with time zone NOT NULL
                 );
+
+                -- إضافة أي أعمدة جديدة تلقائياً إذا كانت الجداول منشأة مسبقاً
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""CancellationReason"" text;
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""TotalFees"" numeric(18,2) NOT NULL DEFAULT 0;
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""DepositAmount"" numeric(18,2) NOT NULL DEFAULT 0;
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""IsDepositPaid"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""DoctorId"" uuid;
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""DoctorName"" varchar(150);
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""CreatedByUserName"" varchar(100);
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""Notes"" text;
+                ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""ServiceType"" varchar(150);
+
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""PatientCode"" varchar(50);
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""AlternativePhone"" varchar(30);
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""NationalId"" varchar(30);
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""Gender"" varchar(20);
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""BirthDate"" timestamp with time zone;
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""Age"" int;
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""Address"" text;
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""BloodGroup"" varchar(10);
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""MedicalHistory"" text;
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""Allergies"" text;
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""Notes"" text;
+
+                ALTER TABLE ""ClinicServices"" ADD COLUMN IF NOT EXISTS ""Category"" varchar(100);
+                ALTER TABLE ""ClinicServices"" ADD COLUMN IF NOT EXISTS ""Description"" text;
+                ALTER TABLE ""ClinicServices"" ADD COLUMN IF NOT EXISTS ""DefaultPrice"" numeric(18,2) NOT NULL DEFAULT 0;
+                ALTER TABLE ""ClinicServices"" ADD COLUMN IF NOT EXISTS ""IsActive"" boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""ClinicServices"" ADD COLUMN IF NOT EXISTS ""DisplayOrder"" int NOT NULL DEFAULT 0;
+
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanViewFinancials"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanManageExpenses"" boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanCancelExpenses"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanManageAppointments"" boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanManagePatients"" boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanExportReports"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanManageUsers"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""PhoneNumber"" varchar(30);
             ");
         }
 
@@ -232,14 +270,34 @@ using (var scope = app.Services.CreateScope())
         }
 
         // بذر حسابات المدير والمساعد الافتراضية
+        if (!db.AppUsers.Any(u => u.Username == "dr"))
+        {
+            db.AppUsers.Add(new AppUser
+            {
+                Username = "dr",
+                PasswordHash = PasswordHasher.HashPassword("123"),
+                FullName = "د. صديق (مدير المنظومة)",
+                PhoneNumber = "01126092725",
+                Role = UserRole.Manager,
+                CanViewFinancials = true,
+                CanManageExpenses = true,
+                CanCancelExpenses = true,
+                CanManageAppointments = true,
+                CanManagePatients = true,
+                CanExportReports = true,
+                CanManageUsers = true,
+                IsActive = true
+            });
+        }
+
         if (!db.AppUsers.Any(u => u.Username == "admin"))
         {
             db.AppUsers.Add(new AppUser
             {
                 Username = "admin",
-                PasswordHash = PasswordHasher.HashPassword("admin123"),
+                PasswordHash = PasswordHasher.HashPassword("123"),
                 FullName = "د. صديق (مدير المنظومة)",
-                PhoneNumber = "01000000000",
+                PhoneNumber = "01126092725",
                 Role = UserRole.Manager,
                 CanViewFinancials = true,
                 CanManageExpenses = true,
