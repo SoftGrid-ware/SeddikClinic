@@ -18,8 +18,10 @@ public interface IExpenseService
     Task<ExpenseDto> CreateExpenseAsync(CreateExpenseDto dto, string userId, string userName, string? ipAddress, string? deviceInfo);
     Task<ExpenseDto> UpdateExpenseAsync(Guid id, UpdateExpenseDto dto, string userId, string userName, string? ipAddress, string? deviceInfo);
     Task<bool> CancelExpenseAsync(Guid id, string reason, string userId, string userName, string? ipAddress, string? deviceInfo);
+    Task<bool> DeleteExpenseAsync(Guid id);
     Task<ExpenseAttachmentDto> AddAttachmentAsync(Guid expenseId, Stream stream, string fileName, string contentType, string userId);
     Task<IEnumerable<ExpenseCategoryDto>> GetCategoriesAsync();
+    Task<ExpenseCategoryDto> CreateCategoryAsync(string nameAr, bool isDirectCost = false);
     
     // المصروفات الدورية
     Task<IEnumerable<RecurringExpenseDto>> GetRecurringExpensesAsync(Guid? branchId);
