@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Admin.App.ViewModels"
+             xmlns:dto="clr-namespace:SeddikClinic.Core.DTOs.Appointments;assembly=SeddikClinic.Core"
+             x:Class="SeddikClinic.Admin.App.Pages.AdminPatientsPage"
+             x:DataType="vm:AdminPatientsViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <Grid RowDefinitions="Auto,*" Padding="16">
+
+        <!-- Search Bar -->
+        <VerticalStackLayout Spacing="10" Margin="0,0,0,12">
+            <Label Text="سجل المرضى 👥" FontSize="20" FontAttributes="Bold" TextColor="#0F172A" />
+
+            <Border BackgroundColor="White" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="#E2E8F0" Padding="12,4">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Entry Text="{Binding SearchQuery}" Placeholder="ابحث بالاسم أو رقم الهاتف..." FontSize="14" TextColor="#0F172A" />
+                    <Button Grid.Column="1" Text="🔍" Command="{Binding SearchPatientsCommand}" BackgroundColor="#7C3AED" TextColor="White" CornerRadius="8" HeightRequest="34" WidthRequest="40" Padding="0" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- Patients List -->
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsLoading}" Command="{Binding SearchPatientsCommand}">
+            <CollectionView ItemsSource="{Binding Patients}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:PatientDto">
+                        <Border BackgroundColor="White"
+                                StrokeShape="RoundRectangle 16"
+                                StrokeThickness="1"
+                                Stroke="#E2E8F0"
+                                Padding="14"
+                                Margin="0,0,0,10">
+                            <VerticalStackLayout Spacing="6">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{Binding FullName}" FontSize="15" FontAttributes="Bold" TextColor="#0F172A" />
+                                    <Label Grid.Column="1" Text="{Binding PatientCode}" FontSize="12" TextColor="#7C3AED" FontAttributes="Bold" />
+                                </Grid>
+
+                                <HorizontalStackLayout Spacing="12">
+                                    <Label Text="{Binding PhoneNumber, StringFormat='📱 {0}'}" FontSize="13" TextColor="#64748B" />
+                                    <Label Text="{Binding Age, StringFormat='🎂 {0} سنة'}" FontSize="13" TextColor="#64748B" />
+                                    <Label Text="{Binding BloodGroup, StringFormat='🩸 {0}'}" FontSize="13" TextColor="#EF4444" FontAttributes="Bold" />
+                                </HorizontalStackLayout>
+
+                                <Label Text="{Binding Allergies, StringFormat='⚠️ حساسية: {0}'}" FontSize="12" TextColor="#DC2626" FontAttributes="Bold" IsVisible="{Binding Allergies, Converter={x:StaticResource StringNotEmptyConverter}}" />
+                                <Label Text="{Binding MedicalHistory, StringFormat='📋 تاريخ مرضي: {0}'}" FontSize="12" TextColor="#0369A1" IsVisible="{Binding MedicalHistory, Converter={x:StaticResource StringNotEmptyConverter}}" />
+
+                                <!-- Action button to edit medical info -->
+                                <Button Text="تعديل السجل الطبي والحساسية ✏️"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AdminPatientsViewModel}}, Path=EditPatientMedicalCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="#F5F3FF"
+                                        TextColor="#7C3AED"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        CornerRadius="8"
+                                        HeightRequest="34"
+                                        HorizontalOptions="End"
+                                        Margin="0,4,0,0" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Spacing="10" Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Label Text="👥" FontSize="40" HorizontalOptions="Center" />
+                        <Label Text="لا توجد نتائج بحث" FontSize="15" FontAttributes="Bold" TextColor="#64748B" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+
+    </Grid>
+
+</ContentPage>

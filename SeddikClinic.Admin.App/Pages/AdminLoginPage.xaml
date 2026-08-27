@@ -1,0 +1,135 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Admin.App.ViewModels"
+             x:Class="SeddikClinic.Admin.App.Pages.AdminLoginPage"
+             x:DataType="vm:AdminLoginViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+
+            <!-- Logo Header -->
+            <Border BackgroundColor="#6D28D9"
+                    StrokeShape="RoundRectangle 28"
+                    WidthRequest="84"
+                    HeightRequest="84"
+                    HorizontalOptions="Center"
+                    StrokeThickness="0">
+                <Label Text="👑" FontSize="42" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+
+            <Label Text="عيادة د. صديق — الإدارة"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   TextColor="#0F172A"
+                   HorizontalOptions="Center" />
+
+            <Label Text="تسجيل دخول المدير ومساعدي العيادة"
+                   FontSize="14"
+                   TextColor="#64748B"
+                   HorizontalOptions="Center" />
+
+            <!-- Login Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 20"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="22"
+                    Margin="0,8,0,0">
+                <VerticalStackLayout Spacing="14">
+
+                    <!-- Username -->
+                    <Label Text="اسم المستخدم 👤" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" />
+                    <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,4">
+                        <Entry Text="{Binding Username}" Placeholder="اسم المستخدم" TextColor="#0F172A" FontSize="16" />
+                    </Border>
+
+                    <!-- Password -->
+                    <Label Text="كلمة المرور 🔒" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" />
+                    <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,4">
+                        <Entry Text="{Binding Password}" IsPassword="True" Placeholder="••••••••" TextColor="#0F172A" FontSize="16" />
+                    </Border>
+
+                    <!-- Remember Me Option -->
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                        <Label Text="تذكرني وحفظ كلمة المرور" FontSize="13.5" TextColor="#475569" VerticalOptions="Center" />
+                        <CheckBox Grid.Column="1" IsChecked="{Binding RememberMe}" Color="#6D28D9" />
+                    </Grid>
+
+                    <!-- Toggle Server Config -->
+                    <Button Text="⚙️ إعدادات رابط السيرفر (اختياري)"
+                            Command="{Binding ToggleServerConfigCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="#6D28D9"
+                            FontSize="12"
+                            FontAttributes="Bold"
+                            HorizontalOptions="Start"
+                            Padding="0" />
+
+                    <!-- Server URL Input (Collapsible) -->
+                    <VerticalStackLayout Spacing="6" IsVisible="{Binding ShowServerConfig}">
+                        <Label Text="رابط السيرفر (API URL)" FontSize="13" FontAttributes="Bold" TextColor="#334155" />
+                        <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="12,4">
+                            <Entry Text="{Binding ServerUrl}" Placeholder="https://..." FontSize="13" TextColor="#0F172A" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Error Message -->
+                    <Border BackgroundColor="#FEF2F2"
+                            StrokeShape="RoundRectangle 10"
+                            StrokeThickness="0"
+                            Padding="12,8"
+                            IsVisible="{Binding ErrorMessage, Converter={x:StaticResource StringNotEmptyConverter}}">
+                        <Label Text="{Binding ErrorMessage}"
+                                TextColor="#DC2626"
+                                FontSize="13"
+                                HorizontalOptions="Center"
+                                HorizontalTextAlignment="Center" />
+                    </Border>
+
+                    <!-- Submit Button -->
+                    <Button Text="تسجيل الدخول 🚀"
+                            Command="{Binding LoginCommand}"
+                            BackgroundColor="#6D28D9"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            FontSize="16"
+                            CornerRadius="14"
+                            HeightRequest="52"
+                            Margin="0,4,0,0" />
+
+                    <!-- Biometric Login Button -->
+                    <Button Text="تسجيل الدخول بالبصمة 👆"
+                            Command="{Binding LoginWithBiometricsCommand}"
+                            IsVisible="{Binding IsBiometricSupported}"
+                            BackgroundColor="#F5F3FF"
+                            TextColor="#6D28D9"
+                            FontAttributes="Bold"
+                            FontSize="15"
+                            CornerRadius="14"
+                            BorderColor="#DDD6FE"
+                            BorderWidth="1"
+                            HeightRequest="50" />
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                       IsVisible="{Binding IsLoading}"
+                                       Color="#6D28D9"
+                                       HorizontalOptions="Center" />
+
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="⚡ متصل بسيرفر منظومة العيادة الموحد"
+                   FontSize="12"
+                   TextColor="#059669"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   Margin="0,16,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

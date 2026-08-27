@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="SeddikClinic.Admin.App.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:SeddikClinic.Admin.App.Pages"
+    Shell.FlyoutBehavior="Disabled"
+    FlowDirection="RightToLeft"
+    Title="عيادة د. صديق - الإدارة">
+
+    <Shell.Resources>
+        <ResourceDictionary>
+            <Style TargetType="TabBar">
+                <Setter Property="Shell.TabBarBackgroundColor" Value="#FFFFFF" />
+                <Setter Property="Shell.TabBarForegroundColor" Value="#7C3AED" />
+                <Setter Property="Shell.TabBarUnselectedColor" Value="#94A3B8" />
+                <Setter Property="Shell.TabBarTitleColor" Value="#7C3AED" />
+            </Style>
+        </ResourceDictionary>
+    </Shell.Resources>
+
+    <!-- Login Route -->
+    <ShellContent
+        Route="AdminLoginPage"
+        ContentTemplate="{DataTemplate pages:AdminLoginPage}"
+        Shell.FlyoutItemIsVisible="False"
+        Shell.NavBarIsVisible="False" />
+
+    <!-- Main Tabs -->
+    <TabBar Route="MainTabs">
+        <Tab Title="الأرباح" Icon="tab_dash.svg" Route="DashboardPage">
+            <ShellContent ContentTemplate="{DataTemplate pages:AdminDashboardPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="المواعيد" Icon="tab_appointments.svg" Route="AppointmentsPage">
+            <ShellContent ContentTemplate="{DataTemplate pages:AdminAppointmentsPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="المرضى" Icon="tab_patients.svg" Route="PatientsPage">
+            <ShellContent ContentTemplate="{DataTemplate pages:AdminPatientsPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="المصاريف" Icon="tab_expenses.svg" Route="ExpensesPage">
+            <ShellContent ContentTemplate="{DataTemplate pages:AdminExpensesPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="الإعدادات" Icon="tab_settings.svg" Route="SettingsPage">
+            <ShellContent ContentTemplate="{DataTemplate pages:AdminSettingsPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+    </TabBar>
+
+</Shell>

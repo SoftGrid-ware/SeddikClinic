@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Admin.App.ViewModels"
+             xmlns:dto="clr-namespace:SeddikClinic.Core.DTOs.Financial;assembly=SeddikClinic.Core"
+             x:Class="SeddikClinic.Admin.App.Pages.AdminExpensesPage"
+             x:DataType="vm:AdminExpensesViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <Grid RowDefinitions="Auto,*" Padding="16">
+
+        <!-- Header & Total Card -->
+        <VerticalStackLayout Spacing="10" Margin="0,0,0,12">
+            <Label Text="إدارة المصاريف 💰" FontSize="20" FontAttributes="Bold" TextColor="#0F172A" />
+
+            <Border BackgroundColor="#FEF2F2" StrokeShape="RoundRectangle 14" StrokeThickness="0" Padding="14">
+                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                    <Label Text="إجمالي المصاريف المعروضة" FontSize="13" TextColor="#991B1B" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding TotalExpensesAmount, StringFormat='{0:N2} ج.م'}" FontSize="18" FontAttributes="Bold" TextColor="#DC2626" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- Expenses List -->
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsLoading}" Command="{Binding LoadExpensesCommand}">
+            <CollectionView ItemsSource="{Binding Expenses}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:ExpenseDto">
+                        <Border BackgroundColor="White"
+                                StrokeShape="RoundRectangle 16"
+                                StrokeThickness="1"
+                                Stroke="#E2E8F0"
+                                Padding="14"
+                                Margin="0,0,0,10">
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="6">
+                                <Label Text="{Binding Title}" FontSize="15" FontAttributes="Bold" TextColor="#0F172A" />
+                                <Label Grid.Column="1" Text="{Binding Amount, StringFormat='{0:N0} ج.م'}" FontSize="15" FontAttributes="Bold" TextColor="#EF4444" />
+
+                                <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="14">
+                                    <Label Text="{Binding CategoryNameAr, StringFormat='🏷️ {0}'}" FontSize="12" TextColor="#64748B" />
+                                    <Label Text="{Binding PaymentDate, StringFormat='📅 {0:yyyy/MM/dd}'}" FontSize="12" TextColor="#64748B" />
+                                    <Label Text="{Binding CreatedByUserName, StringFormat='👤 {0}'}" FontSize="12" TextColor="#64748B" />
+                                </HorizontalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Spacing="10" Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Label Text="💰" FontSize="40" HorizontalOptions="Center" />
+                        <Label Text="لا توجد مصاريف مسجلة" FontSize="15" FontAttributes="Bold" TextColor="#64748B" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+
+    </Grid>
+
+</ContentPage>

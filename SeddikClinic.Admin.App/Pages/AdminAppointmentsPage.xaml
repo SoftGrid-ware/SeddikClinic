@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Admin.App.ViewModels"
+             xmlns:dto="clr-namespace:SeddikClinic.Core.DTOs.Appointments;assembly=SeddikClinic.Core"
+             x:Class="SeddikClinic.Admin.App.Pages.AdminAppointmentsPage"
+             x:DataType="vm:AdminAppointmentsViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <Grid>
+        <!-- Main Appointments Content -->
+        <Grid RowDefinitions="Auto,*" Padding="16">
+
+            <!-- Date Filter & Header -->
+            <VerticalStackLayout Spacing="10" Margin="0,0,0,12">
+                <Label Text="جدول المواعيد والكشوفات 📅" FontSize="20" FontAttributes="Bold" TextColor="#0F172A" />
+
+                <Border BackgroundColor="White" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="#E2E8F0" Padding="12,6">
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
+                        <Label Text="تاريخ العرض:" TextColor="#64748B" FontSize="13" VerticalOptions="Center" />
+                        <DatePicker Grid.Column="1" Date="{Binding SelectedDate}" FontSize="15" TextColor="#0F172A" HorizontalOptions="Center" />
+                        <Button Grid.Column="2" Text="بحث 🔍" Command="{Binding LoadAppointmentsCommand}" BackgroundColor="#7C3AED" TextColor="White" FontSize="12" FontAttributes="Bold" CornerRadius="8" HeightRequest="34" />
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Appointments List -->
+            <RefreshView Grid.Row="1" IsRefreshing="{Binding IsLoading}" Command="{Binding LoadAppointmentsCommand}">
+                <CollectionView ItemsSource="{Binding Appointments}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="dto:AppointmentDto">
+                            <Border BackgroundColor="White"
+                                    StrokeShape="RoundRectangle 16"
+                                    StrokeThickness="1"
+                                    Stroke="#E2E8F0"
+                                    Padding="14"
+                                    Margin="0,0,0,10">
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8">
+
+                                    <!-- Row 1: Patient Name & Status Badge -->
+                                    <Label Text="{Binding PatientName}" FontSize="15" FontAttributes="Bold" TextColor="#0F172A" />
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{Binding Status, Converter={x:StaticResource StatusColorConverter}}"
+                                            StrokeShape="RoundRectangle 8"
+                                            StrokeThickness="0"
+                                            Padding="8,3">
+                                        <Label Text="{Binding Status, Converter={x:StaticResource StatusTextConverter}}"
+                                               FontSize="11"
+                                               TextColor="White"
+                                               FontAttributes="Bold" />
+                                    </Border>
+
+                                    <!-- Row 2: Service, Time, Phone -->
+                                    <VerticalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="4">
+                                        <Label Text="{Binding ServiceType, StringFormat='🩺 الخدمات: {0}'}" FontSize="13" TextColor="#334155" FontAttributes="Bold" />
+                                        <HorizontalStackLayout Spacing="14">
+                                            <Label Text="{Binding StartTime, StringFormat='⏰ {0}'}" FontSize="12" TextColor="#64748B" />
+                                            <Label Text="{Binding PatientPhone, StringFormat='📱 {0}'}" FontSize="12" TextColor="#64748B" />
+                                            <Label Text="{Binding TotalFees, StringFormat='💰 {0:N0} ج.م'}" FontSize="12.5" TextColor="#7C3AED" FontAttributes="Bold" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+
+                                    <!-- Row 3: Action Button to manage appointment -->
+                                    <Button Grid.Row="2" Grid.ColumnSpan="2"
+                                            Text="خيارات وإدارة الموعد ⚙️"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AdminAppointmentsViewModel}}, Path=OpenAppointmentActionsCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="#F5F3FF"
+                                            TextColor="#7C3AED"
+                                            FontSize="12.5"
+                                            FontAttributes="Bold"
+                                            CornerRadius="8"
+                                            HeightRequest="36"
+                                            HorizontalOptions="End" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout Spacing="10" Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                            <Label Text="📅" FontSize="40" HorizontalOptions="Center" />
+                            <Label Text="لا توجد مواعيد مسجلة لهذا اليوم" FontSize="15" FontAttributes="Bold" TextColor="#64748B" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+                </CollectionView>
+            </RefreshView>
+        </Grid>
+
+        <!-- Professional Multi-Service Selection Modal Overlay -->
+        <Grid BackgroundColor="#99000000" IsVisible="{Binding IsMultiServiceModalOpen}">
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 24"
+                    Margin="16,36"
+                    Padding="18"
+                    StrokeThickness="0"
+                    VerticalOptions="FillAndExpand">
+                <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+                    <!-- Modal Header -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="إضافة وتعديل خدمات المريض 🩺" FontSize="17" FontAttributes="Bold" TextColor="#0F172A" />
+                            <Label Text="{Binding SelectedAppointment.PatientName, StringFormat='المريض: {0}'}" FontSize="13" TextColor="#6D28D9" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="✕" Command="{Binding CloseMultiServiceModalCommand}" BackgroundColor="#F1F5F9" TextColor="#475569" CornerRadius="16" HeightRequest="32" WidthRequest="32" Padding="0" FontAttributes="Bold" />
+                    </Grid>
+
+                    <!-- Search Filter Box -->
+                    <Border Grid.Row="1" BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#E2E8F0" StrokeThickness="1" Padding="12,2">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Entry Text="{Binding ServiceSearchText}" Placeholder="ابحث في قائمة الخدمات..." FontSize="13.5" TextColor="#0F172A">
+                                <Entry.Behaviors>
+                                    <!-- simple text change -->
+                                </Entry.Behaviors>
+                            </Entry>
+                            <Button Grid.Column="1" Text="🔍" Command="{Binding FilterServicesCommand}" BackgroundColor="Transparent" TextColor="#6D28D9" FontSize="14" Padding="0" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Services Multi-Selection List -->
+                    <CollectionView Grid.Row="2" ItemsSource="{Binding FilteredServicesList}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectableServiceItem">
+                                <Border BackgroundColor="White"
+                                        StrokeShape="RoundRectangle 14"
+                                        Stroke="#CBD5E1"
+                                        StrokeThickness="1"
+                                        Padding="12,10"
+                                        Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <!-- Checkbox -->
+                                        <CheckBox IsChecked="{Binding IsSelected}" Color="#6D28D9" VerticalOptions="Center" />
+
+                                        <!-- Service Name & Category -->
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                            <Label Text="{Binding Name}" FontSize="14" FontAttributes="Bold" TextColor="#0F172A" />
+                                            <Label Text="{Binding CategoryName}" FontSize="11" TextColor="#64748B" />
+                                        </VerticalStackLayout>
+
+                                        <!-- Price & Edit Price Button -->
+                                        <HorizontalStackLayout Grid.Column="2" Spacing="6" VerticalOptions="Center">
+                                            <Border BackgroundColor="#F5F3FF" StrokeShape="RoundRectangle 8" StrokeThickness="0" Padding="8,4">
+                                                <Label Text="{Binding Price, StringFormat='{0:N0} ج.م'}" FontSize="13" FontAttributes="Bold" TextColor="#6D28D9" VerticalOptions="Center" />
+                                            </Border>
+                                            <Button Text="✏️"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AdminAppointmentsViewModel}}, Path=AdjustServicePriceCommand}"
+                                                    CommandParameter="{Binding .}"
+                                                    BackgroundColor="#EDE9FE"
+                                                    TextColor="#6D28D9"
+                                                    FontSize="11"
+                                                    CornerRadius="6"
+                                                    HeightRequest="28"
+                                                    WidthRequest="28"
+                                                    Padding="0" />
+                                        </HorizontalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Summary & Action Buttons -->
+                    <VerticalStackLayout Grid.Row="3" Spacing="10" Padding="0,6,0,0">
+                        <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 14" Stroke="#E2E8F0" StrokeThickness="1" Padding="14,10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{Binding SelectedServicesCount, StringFormat='الخدمات المختارة: ({0})'}" FontSize="13" FontAttributes="Bold" TextColor="#334155" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding TotalSelectedServicesAmount, StringFormat='الإجمالي: {0:N0} ج.م'}" FontSize="15" FontAttributes="Bold" TextColor="#059669" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Button Text="حفظ وإسناد الخدمات للمريض 💾"
+                                Command="{Binding SaveMultiServicesCommand}"
+                                BackgroundColor="#6D28D9"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="15"
+                                CornerRadius="14"
+                                HeightRequest="48" />
+                    </VerticalStackLayout>
+
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Grid>
+
+</ContentPage>

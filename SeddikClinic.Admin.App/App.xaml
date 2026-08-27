@@ -1,0 +1,27 @@
+﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:SeddikClinic.Admin.App.Converters"
+             x:Class="SeddikClinic.Admin.App.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:StatusColorConverter x:Key="StatusColorConverter" />
+            <converters:StatusTextConverter x:Key="StatusTextConverter" />
+
+            <!-- Admin Theme Colors (Purple/Indigo) -->
+            <Color x:Key="AdminPrimary">#7C3AED</Color>
+            <Color x:Key="AdminDark">#6D28D9</Color>
+            <Color x:Key="AdminLight">#F5F3FF</Color>
+            <Color x:Key="BgColor">#F8FAFC</Color>
+            <Color x:Key="CardBg">#FFFFFF</Color>
+            <Color x:Key="TextDark">#0F172A</Color>
+            <Color x:Key="TextMuted">#64748B</Color>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

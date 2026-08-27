@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Admin.App.ViewModels"
+             x:Class="SeddikClinic.Admin.App.Pages.AdminDashboardPage"
+             x:DataType="vm:AdminDashboardViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="18" Spacing="16">
+
+                <!-- Header -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="عيادة د. صديق" FontSize="13" TextColor="#6D28D9" FontAttributes="Bold" />
+                        <Label Text="لوحة التحكم الإدارية" FontSize="20" FontAttributes="Bold" TextColor="#0F172A" />
+                    </VerticalStackLayout>
+                    <Border Grid.Column="1" BackgroundColor="#F5F3FF" StrokeShape="RoundRectangle 12" StrokeThickness="0" Padding="12,6">
+                        <Label Text="إدارة العيادة" FontSize="12" FontAttributes="Bold" TextColor="#6D28D9" />
+                    </Border>
+                </Grid>
+
+                <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="#6D28D9" HorizontalOptions="Center" />
+
+                <!-- Financial Metrics Cards -->
+                <Label Text="المؤشرات المالية (الشهر الحالي)" FontSize="15" FontAttributes="Bold" TextColor="#334155" />
+
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                    <Border BackgroundColor="White" StrokeShape="RoundRectangle 18" StrokeThickness="1" Stroke="#E2E8F0" Padding="14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="إجمالي الإيرادات" FontSize="12" TextColor="#64748B" />
+                            <Label Text="{Binding TotalRevenue, StringFormat='{0:N0} ج.م'}" FontSize="18" FontAttributes="Bold" TextColor="#16A34A" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="1" BackgroundColor="White" StrokeShape="RoundRectangle 18" StrokeThickness="1" Stroke="#E2E8F0" Padding="14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="إجمالي المصروفات" FontSize="12" TextColor="#64748B" />
+                            <Label Text="{Binding TotalExpenses, StringFormat='{0:N0} ج.م'}" FontSize="18" FontAttributes="Bold" TextColor="#DC2626" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" BackgroundColor="White" StrokeShape="RoundRectangle 18" StrokeThickness="1" Stroke="#E2E8F0" Padding="14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="صافي الأرباح" FontSize="12" TextColor="#64748B" />
+                            <Label Text="{Binding NetProfit, StringFormat='{0:N0} ج.م'}" FontSize="18" FontAttributes="Bold" TextColor="#6D28D9" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="1" BackgroundColor="White" StrokeShape="RoundRectangle 18" StrokeThickness="1" Stroke="#E2E8F0" Padding="14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="مبالغ غير محصلة" FontSize="12" TextColor="#64748B" />
+                            <Label Text="{Binding TotalUncollectedReceivables, StringFormat='{0:N0} ج.م'}" FontSize="18" FontAttributes="Bold" TextColor="#D97706" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+                <!-- Today Overview -->
+                <Label Text="حركة العيادة اليوم" FontSize="15" FontAttributes="Bold" TextColor="#334155" Margin="0,6,0,0" />
+
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                    <Border BackgroundColor="White" StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="#E2E8F0" Padding="12">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label Text="إجمالي الحالات" FontSize="11" TextColor="#64748B" HorizontalOptions="Center" />
+                            <Label Text="{Binding TodayAppointmentsCount}" FontSize="18" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="1" BackgroundColor="White" StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="#E2E8F0" Padding="12">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label Text="الانتظار" FontSize="11" TextColor="#D97706" HorizontalOptions="Center" />
+                            <Label Text="{Binding WaitingCount}" FontSize="18" FontAttributes="Bold" TextColor="#D97706" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="2" BackgroundColor="White" StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="#E2E8F0" Padding="12">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label Text="تم الكشف" FontSize="11" TextColor="#16A34A" HorizontalOptions="Center" />
+                            <Label Text="{Binding CompletedCount}" FontSize="18" FontAttributes="Bold" TextColor="#16A34A" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+
+</ContentPage>
