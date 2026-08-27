@@ -30,12 +30,15 @@ public class ExpenseService : IExpenseService
     {
         var query = BuildFilterQuery(filter);
 
+        var pageIndex = filter.PageIndex < 1 ? 1 : filter.PageIndex;
+        var pageSize = filter.PageSize < 1 ? 50 : filter.PageSize;
+
         var expenses = await query
             .Include(e => e.Category)
             .Include(e => e.Attachments)
             .OrderByDescending(e => e.PaymentDate)
-            .Skip((filter.PageIndex - 1) * filter.PageSize)
-            .Take(filter.PageSize)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         return expenses.Select(MapToExpenseDto);
@@ -237,6 +240,17 @@ public class ExpenseService : IExpenseService
         return true;
     }
 
+    public async Task<bool> DeleteExpenseAsync(Guid id)
+    {
+        var expense = await _dbContext.Expenses.FirstOrDefaultAsync(e => e.Id == id);
+        if (expense == null) return false;
+
+        expense.IsDeleted = true;
+        expense.UpdatedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<ExpenseAttachmentDto> AddAttachmentAsync(
         Guid expenseId, 
         Stream stream, 
@@ -297,6 +311,29 @@ public class ExpenseService : IExpenseService
                 IsDirectCost = c.IsDirectCost
             })
             .ToListAsync();
+    }
+
+    public async Task<ExpenseCategoryDto> CreateCategoryAsync(string nameAr, bool isDirectCost = false)
+    {
+        var category = new ExpenseCategory
+        {
+            Name = nameAr,
+            NameAr = nameAr,
+            IsActive = true,
+            IsDirectCost = isDirectCost,
+            DisplayOrder = await _dbContext.ExpenseCategories.CountAsync() + 1
+        };
+        _dbContext.ExpenseCategories.Add(category);
+        await _dbContext.SaveChangesAsync();
+
+        return new ExpenseCategoryDto
+        {
+            Id = category.Id,
+            Name = category.Name,
+            NameAr = category.NameAr,
+            IsActive = category.IsActive,
+            IsDirectCost = category.IsDirectCost
+        };
     }
 
     // المصروفات الدورية

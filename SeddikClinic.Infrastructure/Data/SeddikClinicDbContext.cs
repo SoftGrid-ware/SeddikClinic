@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using SeddikClinic.Core.Entities.Appointments;
 using SeddikClinic.Core.Entities.Billing;
 using SeddikClinic.Core.Entities.Financial;
+using SeddikClinic.Core.Entities.Identity;
 
 namespace SeddikClinic.Infrastructure.Data;
 
@@ -9,6 +11,11 @@ public class SeddikClinicDbContext : DbContext
     public SeddikClinicDbContext(DbContextOptions<SeddikClinicDbContext> options) : base(options)
     {
     }
+
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<ClinicService> ClinicServices => Set<ClinicService>();
 
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<Expense> Expenses => Set<Expense>();
@@ -26,6 +33,50 @@ public class SeddikClinicDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // إعدادات AppUser
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FullName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.PasswordHash).IsRequired();
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        // إعدادات Patient
+        modelBuilder.Entity<Patient>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FullName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.PhoneNumber).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.PatientCode).HasMaxLength(50);
+            entity.HasIndex(e => e.PhoneNumber);
+            entity.HasIndex(e => e.FullName);
+            entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        // إعدادات Appointment
+        modelBuilder.Entity<Appointment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AppointmentNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DoctorName).HasMaxLength(150);
+            entity.Property(e => e.ServiceType).HasMaxLength(150);
+
+            entity.HasIndex(e => e.AppointmentDate);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.PatientId);
+            entity.HasIndex(e => e.DoctorId);
+
+            entity.HasOne(e => e.Patient)
+                .WithMany(p => p.Appointments)
+                .HasForeignKey(e => e.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasQueryFilter(e => !e.IsDeleted);
+        });
 
         // إعدادات ExpenseCategory
         modelBuilder.Entity<ExpenseCategory>(entity =>
@@ -59,7 +110,7 @@ public class SeddikClinicDbContext : DbContext
                 .HasForeignKey(e => e.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasQueryFilter(e => !e.IsDeleted); // تفعيل Soft Delete افتراضياً
+            entity.HasQueryFilter(e => !e.IsDeleted);
         });
 
         // إعدادات RecurringExpense
@@ -164,8 +215,33 @@ public class SeddikClinicDbContext : DbContext
             entity.HasIndex(e => e.RefundDate);
         });
 
-        // بذر التصنيفات الافتراضية للعيادة (Seed Data)
         SeedDefaultCategories(modelBuilder);
+        SeedDefaultClinicServices(modelBuilder);
+    }
+
+    private static void SeedDefaultClinicServices(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ClinicService>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.DefaultPrice).HasPrecision(18, 2);
+        });
+
+        var services = new List<ClinicService>
+        {
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220001"), Name = "كشف واستشارة طبية", DefaultPrice = 250m, Category = "كشف وفحص", DisplayOrder = 1, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220002"), Name = "حشو أسنان كمبوزيت", DefaultPrice = 500m, Category = "علاج وتجميل", DisplayOrder = 2, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220003"), Name = "علاج جذور وعصب", DefaultPrice = 800m, Category = "علاج وتجميل", DisplayOrder = 3, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220004"), Name = "تنظيف وتلميع أسنان وتكلسات", DefaultPrice = 400m, Category = "وقاية وتجميل", DisplayOrder = 4, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220005"), Name = "تبييض أسنان احترافي", DefaultPrice = 1500m, Category = "وقاية وتجميل", DisplayOrder = 5, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220006"), Name = "تركيبات وتيجان زيركون", DefaultPrice = 2500m, Category = "تركيبات", DisplayOrder = 6, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220007"), Name = "زراعة أسنان", DefaultPrice = 5000m, Category = "جراحة وزراعة", DisplayOrder = 7, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220008"), Name = "تقويم أسنان", DefaultPrice = 10000m, Category = "تقويم", DisplayOrder = 8, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { Id = new Guid("22222222-2222-2222-2222-222222220009"), Name = "خلع ضرس وجراحة", DefaultPrice = 350m, Category = "جراحة وزراعة", DisplayOrder = 9, IsActive = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
+        };
+
+        modelBuilder.Entity<ClinicService>().HasData(services);
     }
 
     private static void SeedDefaultCategories(ModelBuilder modelBuilder)
