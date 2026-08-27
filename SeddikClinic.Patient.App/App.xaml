@@ -1,0 +1,33 @@
+﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:SeddikClinic.Patient.App.Converters"
+             x:Class="SeddikClinic.Patient.App.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <converters:BoolToInvertedBoolConverter x:Key="BoolToInvertedBoolConverter" />
+            <converters:BoolToTextConverter x:Key="BoolToTextConverter" />
+            <converters:StatusColorConverter x:Key="StatusColorConverter" />
+            <converters:StatusTextConverter x:Key="StatusTextConverter" />
+
+            <!-- Primary Colors -->
+            <Color x:Key="PrimaryColor">#0284C7</Color>
+            <Color x:Key="PrimaryDark">#0369A1</Color>
+            <Color x:Key="PrimaryLight">#E0F2FE</Color>
+            <Color x:Key="BgColor">#F8FAFC</Color>
+            <Color x:Key="CardBg">#FFFFFF</Color>
+            <Color x:Key="TextDark">#0F172A</Color>
+            <Color x:Key="TextMuted">#64748B</Color>
+            <Color x:Key="SuccessColor">#16A34A</Color>
+            <Color x:Key="WarningColor">#D97706</Color>
+            <Color x:Key="DangerColor">#DC2626</Color>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

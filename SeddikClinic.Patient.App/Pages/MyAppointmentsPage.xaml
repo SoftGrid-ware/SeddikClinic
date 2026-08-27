@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
+             xmlns:dto="clr-namespace:SeddikClinic.Core.DTOs.Appointments;assembly=SeddikClinic.Core"
+             x:Class="SeddikClinic.Patient.App.Pages.MyAppointmentsPage"
+             x:DataType="vm:MyAppointmentsViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft"
+             Title="مواعيدي">
+
+    <Grid RowDefinitions="Auto, *">
+
+        <!-- Filter Segment -->
+        <Border Grid.Row="0" BackgroundColor="White" StrokeThickness="0" Padding="16,12">
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                <Button Text="الكل"
+                        Command="{Binding FilterCommand}" CommandParameter="All"
+                        BackgroundColor="{Binding SelectedFilter, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#0284C7|#F1F5F9'}"
+                        TextColor="{Binding SelectedFilter, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='White|#475569'}"
+                        FontAttributes="Bold" FontSize="13" CornerRadius="12" HeightRequest="38" Padding="16,0" />
+
+                <Button Text="القادمة"
+                        Command="{Binding FilterCommand}" CommandParameter="Upcoming"
+                        BackgroundColor="{Binding SelectedFilter, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#F1F5F9|#0284C7'}"
+                        TextColor="{Binding SelectedFilter, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#475569|White'}"
+                        FontAttributes="Bold" FontSize="13" CornerRadius="12" HeightRequest="38" Padding="16,0" />
+
+                <Button Text="المنتهية"
+                        Command="{Binding FilterCommand}" CommandParameter="Completed"
+                        BackgroundColor="#F1F5F9" TextColor="#475569"
+                        FontAttributes="Bold" FontSize="13" CornerRadius="12" HeightRequest="38" Padding="16,0" />
+            </HorizontalStackLayout>
+        </Border>
+
+        <!-- Appointments List -->
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <ScrollView Padding="16">
+                <VerticalStackLayout Spacing="12">
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="#0284C7" HorizontalOptions="Center" />
+
+                    <!-- Empty State -->
+                    <VerticalStackLayout Spacing="12"
+                                         Padding="40"
+                                         HorizontalOptions="Center"
+                                         IsVisible="{Binding FilteredAppointments.Count, Converter={x:StaticResource InvertedBoolConverter}}">
+                        <Label Text="لا توجد مواعيد مسجلة حالياً" FontSize="16" FontAttributes="Bold" TextColor="#64748B" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <!-- Appointments Cards -->
+                    <CollectionView ItemsSource="{Binding FilteredAppointments}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dto:AppointmentDto">
+                                <Border BackgroundColor="White"
+                                        StrokeShape="RoundRectangle 18"
+                                        StrokeThickness="1"
+                                        Stroke="#E2E8F0"
+                                        Padding="16"
+                                        Margin="0,0,0,12">
+                                    <VerticalStackLayout Spacing="10">
+
+                                        <!-- Header: Service & Status Badge -->
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding ServiceType}" FontSize="16" FontAttributes="Bold" TextColor="#0F172A" VerticalOptions="Center" />
+                                            <Border Grid.Column="1"
+                                                    BackgroundColor="{Binding StatusBackgroundHex}"
+                                                    StrokeShape="RoundRectangle 10"
+                                                    StrokeThickness="0"
+                                                    Padding="10,4">
+                                                <Label Text="{Binding StatusNameAr}" FontSize="12" FontAttributes="Bold" TextColor="{Binding StatusColorHex}" />
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Date & Time -->
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                            <Label Text="{Binding DateFormatted, StringFormat='التاريخ: {0}'}" FontSize="13" TextColor="#475569" />
+                                            <Label Grid.Column="1" Text="{Binding FormattedTime, StringFormat='الوقت: {0}'}" FontSize="13" TextColor="#0284C7" FontAttributes="Bold" />
+                                        </Grid>
+
+                                        <!-- Financial Summary -->
+                                        <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 10" Stroke="#E2E8F0" StrokeThickness="1" Padding="10,6">
+                                            <Grid ColumnDefinitions="*,*">
+                                                <Label Text="{Binding TotalFees, StringFormat='الرسوم: {0:N0} ج.م'}" FontSize="12.5" TextColor="#16A34A" FontAttributes="Bold" />
+                                                <Label Grid.Column="1" Text="{Binding DoctorName, StringFormat='الطبيب: {0}'}" FontSize="12" TextColor="#64748B" HorizontalOptions="End" />
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Cancellation Reason if Cancelled -->
+                                        <Border BackgroundColor="#FEF2F2" StrokeShape="RoundRectangle 10" StrokeThickness="1" Stroke="#FECACA" Padding="10,6"
+                                                IsVisible="{Binding CancellationReason, Converter={x:StaticResource StringNotEmptyConverter}}">
+                                            <Label Text="{Binding CancellationReason, StringFormat='سبب الإلغاء: {0}'}" FontSize="12" TextColor="#DC2626" FontAttributes="Bold" />
+                                        </Border>
+
+                                        <!-- Notes if exists -->
+                                        <Label Text="{Binding Notes, StringFormat='ملاحظات: {0}'}"
+                                               FontSize="12"
+                                               TextColor="#64748B"
+                                               IsVisible="{Binding Notes, Converter={x:StaticResource StringNotEmptyConverter}}" />
+
+                                        <!-- Cancel Button (Visible ONLY if CanCancel == true) -->
+                                        <Button Text="إلغاء الموعد"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MyAppointmentsViewModel}}, Path=CancelAppointmentCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding CanCancel}"
+                                                BackgroundColor="#FEE2E2"
+                                                TextColor="#DC2626"
+                                                FontAttributes="Bold"
+                                                FontSize="13"
+                                                CornerRadius="10"
+                                                HeightRequest="36"
+                                                Margin="0,6,0,0" />
+
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+    </Grid>
+
+</ContentPage>

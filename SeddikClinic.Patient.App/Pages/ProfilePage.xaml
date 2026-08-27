@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
+             x:Class="SeddikClinic.Patient.App.Pages.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft"
+             Title="الملف الشخصي">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <!-- Profile Header Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 22"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="22">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Border BackgroundColor="#0284C7"
+                            StrokeShape="RoundRectangle 36"
+                            WidthRequest="72"
+                            HeightRequest="72"
+                            HorizontalOptions="Center"
+                            StrokeThickness="0">
+                        <Label Text="+" FontSize="36" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <Label Text="{Binding PatientName}"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#0F172A"
+                           HorizontalOptions="Center" />
+
+                    <Label Text="{Binding PhoneNumber}"
+                           FontSize="14"
+                           TextColor="#64748B"
+                           HorizontalOptions="Center" />
+
+                    <Border BackgroundColor="#F1F5F9"
+                            StrokeShape="RoundRectangle 10"
+                            StrokeThickness="0"
+                            Padding="12,4"
+                            HorizontalOptions="Center">
+                        <Label Text="{Binding PatientCode, StringFormat='كود المريض: {0}'}"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="#475569" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Medical Info Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 20"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="20">
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="البيانات والسجل الطبي" FontSize="16" FontAttributes="Bold" TextColor="#0F172A" VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="تعديل ✏️"
+                                Command="{Binding EditMedicalInfoCommand}"
+                                BackgroundColor="#F0F9FF"
+                                TextColor="#0284C7"
+                                FontAttributes="Bold"
+                                FontSize="12.5"
+                                CornerRadius="8"
+                                HeightRequest="34"
+                                Padding="12,0" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                        <Label Text="فصيلة الدم:" TextColor="#64748B" FontSize="14" />
+                        <Label Grid.Column="1" Text="{Binding BloodGroup}" FontAttributes="Bold" TextColor="#0F172A" FontSize="14" />
+
+                        <Label Grid.Row="1" Text="الحساسية:" TextColor="#64748B" FontSize="14" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Allergies}" FontAttributes="Bold" TextColor="#DC2626" FontSize="13.5" />
+
+                        <Label Grid.Row="2" Text="التاريخ الطبي:" TextColor="#64748B" FontSize="14" />
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding MedicalHistory}" FontAttributes="Bold" TextColor="#0284C7" FontSize="13.5" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="#0284C7" HorizontalOptions="Center" />
+
+            <!-- Logout Button -->
+            <Button Text="تسجيل الخروج"
+                    Command="{Binding LogoutCommand}"
+                    BackgroundColor="#FEE2E2"
+                    TextColor="#DC2626"
+                    FontAttributes="Bold"
+                    FontSize="15"
+                    CornerRadius="14"
+                    HeightRequest="50"
+                    Margin="0,10,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

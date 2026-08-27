@@ -1,0 +1,150 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
+             x:Class="SeddikClinic.Patient.App.Pages.ContactUsPage"
+             x:DataType="vm:ContactUsViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft"
+             Title="اتصل بنا">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <!-- Clinic Contact & Social Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 22"
+                    StrokeThickness="1"
+                    Stroke="#BAE6FD"
+                    Padding="22">
+                <VerticalStackLayout Spacing="12">
+                    <Border BackgroundColor="#0284C7"
+                            StrokeShape="RoundRectangle 20"
+                            WidthRequest="60"
+                            HeightRequest="60"
+                            HorizontalOptions="Center"
+                            StrokeThickness="0">
+                        <Label Text="+" FontSize="32" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <Label Text="عيادة د. صديق التخصصية"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#0F172A"
+                           HorizontalOptions="Center" />
+
+                    <Label Text="رعاية طبية متكاملة لطب وجراحة وزراعة الأسنان بأحدث التقنيات"
+                           FontSize="13"
+                           TextColor="#64748B"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center" />
+
+                    <Border BackgroundColor="#F0F9FF" StrokeShape="RoundRectangle 12" Stroke="#E0F2FE" StrokeThickness="1" Padding="14,10">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="رقم هاتف وحجوزات العيادة:" FontSize="12" TextColor="#0369A1" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Label Text="{Binding ClinicPhone}" FontSize="20" FontAttributes="Bold" TextColor="#0284C7" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,4,0,0">
+                        <Button Text="اتصال بالعيادة"
+                                Command="{Binding CallClinicCommand}"
+                                BackgroundColor="#0284C7"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="14"
+                                CornerRadius="12"
+                                HeightRequest="46" />
+
+                        <Button Grid.Column="1"
+                                Text="واتساب العيادة"
+                                Command="{Binding OpenClinicWhatsAppCommand}"
+                                BackgroundColor="#16A34A"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="14"
+                                CornerRadius="12"
+                                HeightRequest="46" />
+                    </Grid>
+
+                    <Button Text="زيارة صفحة الفيسبوك الرسمية"
+                            Command="{Binding OpenFacebookPageCommand}"
+                            BackgroundColor="#1877F2"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            FontSize="14"
+                            CornerRadius="12"
+                            HeightRequest="46"
+                            Margin="0,4,0,0" />
+
+                    <BoxView HeightRequest="1" Color="#E2E8F0" Margin="0,6" />
+
+                    <Label Text="مواعيد العمل: يومياً من 05:00 مساءً حتى 10:30 مساءً (عدا الجمعة)"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="#475569"
+                           HorizontalOptions="Center" />
+                    <Label Text="جميع الحقوق محفوظة لعيادة د. صديق"
+                           FontSize="11"
+                           TextColor="#94A3B8"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Developer & Technical Support Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 22"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="20">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="التطوير والدعم الفني للمنظومة"
+                           FontSize="15"
+                           FontAttributes="Bold"
+                           TextColor="#0F172A"
+                           HorizontalOptions="Center" />
+
+                    <Label Text="تم تصميم وبرمجة المنظومة وتطبيقات الهاتف بواسطة:"
+                           FontSize="12"
+                           TextColor="#64748B"
+                           HorizontalOptions="Center" />
+
+                    <Label Text="{Binding DeveloperName}"
+                           FontSize="17"
+                           FontAttributes="Bold"
+                           TextColor="#0284C7"
+                           HorizontalOptions="Center" />
+
+                    <Label Text="{Binding DeveloperPhone}"
+                           FontSize="15"
+                           FontAttributes="Bold"
+                           TextColor="#1E293B"
+                           HorizontalOptions="Center" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,4,0,0">
+                        <Button Text="اتصال بالمطور"
+                                Command="{Binding CallDeveloperCommand}"
+                                BackgroundColor="#0284C7"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="13"
+                                CornerRadius="10"
+                                HeightRequest="42" />
+
+                        <Button Grid.Column="1"
+                                Text="واتساب المطور"
+                                Command="{Binding OpenWhatsAppCommand}"
+                                BackgroundColor="#16A34A"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="13"
+                                CornerRadius="10"
+                                HeightRequest="42" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

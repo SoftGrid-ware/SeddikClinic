@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
+             xmlns:dto="clr-namespace:SeddikClinic.Core.DTOs.Appointments;assembly=SeddikClinic.Core"
+             x:Class="SeddikClinic.Patient.App.Pages.HomePage"
+             x:DataType="vm:HomeViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- Welcome Header Card -->
+            <Border BackgroundColor="#0284C7"
+                    StrokeShape="RoundRectangle 22"
+                    StrokeThickness="0"
+                    Padding="22">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="عيادة د. صديق التخصصية" FontSize="14" TextColor="#BAE6FD" />
+                    <Label Text="{Binding PatientName, StringFormat='أهلاً بك، {0}'}" FontSize="22" FontAttributes="Bold" TextColor="White" />
+                    <Label Text="يسعدنا استقبالك وتقديم أفضل رعاية طبية متخصصة" FontSize="13" TextColor="#E0F2FE" />
+
+                    <Button Text="حجز موعد كشف جديد"
+                            Command="{Binding BookNowCommand}"
+                            BackgroundColor="White"
+                            TextColor="#0284C7"
+                            FontAttributes="Bold"
+                            FontSize="15"
+                            CornerRadius="12"
+                            HeightRequest="46"
+                            Margin="0,8,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Upcoming Appointments Section -->
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="مواعيدك القادمة" FontSize="17" FontAttributes="Bold" TextColor="#0F172A" VerticalOptions="Center" />
+                <Button Grid.Column="1" Text="عرض الكل" Command="{Binding ViewAllAppointmentsCommand}" BackgroundColor="Transparent" TextColor="#0284C7" FontSize="13" FontAttributes="Bold" Padding="0" />
+            </Grid>
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="#0284C7" HorizontalOptions="Center" />
+
+            <!-- Empty State -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 18"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="24"
+                    IsVisible="{Binding UpcomingAppointments.Count, Converter={x:StaticResource InvertedBoolConverter}}">
+                <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                    <Label Text="لا توجد مواعيد قادمة" FontSize="15" FontAttributes="Bold" TextColor="#64748B" HorizontalOptions="Center" />
+                    <Label Text="يمكنك حجز موعد كشفك القادم بضغطة زر" FontSize="13" TextColor="#94A3B8" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Appointments List -->
+            <CollectionView ItemsSource="{Binding UpcomingAppointments}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:AppointmentDto">
+                        <Border BackgroundColor="White"
+                                StrokeShape="RoundRectangle 18"
+                                StrokeThickness="1"
+                                Stroke="#E2E8F0"
+                                Padding="16"
+                                Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                <Label Text="{Binding ServiceType}" FontSize="15" FontAttributes="Bold" TextColor="#0F172A" />
+                                <Border Grid.Column="1"
+                                        BackgroundColor="{Binding StatusBackgroundHex}"
+                                        StrokeShape="RoundRectangle 8"
+                                        StrokeThickness="0"
+                                        Padding="8,3">
+                                    <Label Text="{Binding StatusNameAr}" FontSize="11" FontAttributes="Bold" TextColor="{Binding StatusColorHex}" />
+                                </Border>
+
+                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" Margin="0,8,0,0">
+                                    <Label Text="{Binding DateFormatted, StringFormat='التاريخ: {0}'}" FontSize="13" TextColor="#64748B" />
+                                    <Label Grid.Column="1" Text="{Binding FormattedTime, StringFormat='الوقت: {0}'}" FontSize="13" TextColor="#0284C7" FontAttributes="Bold" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

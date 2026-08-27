@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
+             x:Class="SeddikClinic.Patient.App.Pages.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+
+            <!-- Logo Header -->
+            <Border BackgroundColor="#0284C7"
+                    StrokeShape="RoundRectangle 28"
+                    WidthRequest="80"
+                    HeightRequest="80"
+                    HorizontalOptions="Center"
+                    StrokeThickness="0">
+                <Label Text="+" FontSize="44" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+
+            <Label Text="عيادة د. صديق"
+                   FontSize="26"
+                   FontAttributes="Bold"
+                   TextColor="#0F172A"
+                   HorizontalOptions="Center" />
+
+            <Label Text="مرحباً بك! سجل دخولك لحجز ومتابعة مواعيدك الطبية"
+                   FontSize="14"
+                   TextColor="#64748B"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+
+            <!-- Login Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 20"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="22"
+                    Margin="0,8,0,0">
+                <VerticalStackLayout Spacing="16">
+
+                    <!-- Phone Number Input -->
+                    <Label Text="رقم الهاتف" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" />
+                    <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,4">
+                        <Entry Text="{Binding PhoneNumber}"
+                               Placeholder="مثال: 01012345678"
+                               Keyboard="Telephone"
+                               TextColor="#0F172A"
+                               FontSize="16" />
+                    </Border>
+
+                    <!-- Full Name Input (for new patients) -->
+                    <VerticalStackLayout Spacing="6" IsVisible="{Binding IsNewPatient}">
+                        <Label Text="الاسم بالكامل" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" />
+                        <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,4">
+                            <Entry Text="{Binding FullName}"
+                                   Placeholder="أدخل اسمك الثلاثي"
+                                   TextColor="#0F172A"
+                                   FontSize="16" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Error Message -->
+                    <Border BackgroundColor="#FEF2F2"
+                            StrokeShape="RoundRectangle 10"
+                            StrokeThickness="0"
+                            Padding="12,8"
+                            IsVisible="{Binding ErrorMessage, Converter={x:StaticResource StringNotEmptyConverter}}">
+                        <Label Text="{Binding ErrorMessage}"
+                               TextColor="#DC2626"
+                               FontSize="13"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                    </Border>
+
+                    <!-- Submit Button -->
+                    <Button Text="{Binding IsNewPatient, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='إنشاء حساب ومتابعة|تسجيل الدخول'}"
+                            Command="{Binding SubmitCommand}"
+                            BackgroundColor="#0284C7"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            FontSize="16"
+                            CornerRadius="14"
+                            HeightRequest="52"
+                            Margin="0,6,0,0" />
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                       IsVisible="{Binding IsLoading}"
+                                       Color="#0284C7"
+                                       HorizontalOptions="Center" />
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Footer -->
+            <Label Text="عيادة د. صديق التخصصية • جميع الحقوق محفوظة"
+                   FontSize="12"
+                   TextColor="#94A3B8"
+                   HorizontalOptions="Center"
+                   Margin="0,16,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="SeddikClinic.Patient.App.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:SeddikClinic.Patient.App.Pages"
+    Shell.FlyoutBehavior="Disabled"
+    FlowDirection="RightToLeft"
+    Title="عيادة د. صديق">
+
+    <Shell.Resources>
+        <ResourceDictionary>
+            <Style TargetType="TabBar">
+                <Setter Property="Shell.TabBarBackgroundColor" Value="#FFFFFF" />
+                <Setter Property="Shell.TabBarForegroundColor" Value="#0284C7" />
+                <Setter Property="Shell.TabBarUnselectedColor" Value="#94A3B8" />
+                <Setter Property="Shell.TabBarTitleColor" Value="#0284C7" />
+            </Style>
+        </ResourceDictionary>
+    </Shell.Resources>
+
+    <!-- Login Route -->
+    <ShellContent
+        Route="LoginPage"
+        ContentTemplate="{DataTemplate pages:LoginPage}"
+        Shell.FlyoutItemIsVisible="False"
+        Shell.NavBarIsVisible="False" />
+
+    <!-- Main Tabs -->
+    <TabBar Route="MainTabs">
+        <Tab Title="الرئيسية" Icon="tab_home.svg" Route="HomeTab">
+            <ShellContent Route="HomePage" ContentTemplate="{DataTemplate pages:HomePage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="حجز موعد" Icon="tab_booking.svg" Route="BookingTab">
+            <ShellContent Route="BookingPage" ContentTemplate="{DataTemplate pages:BookingPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="مواعيدي" Icon="tab_appointments.svg" Route="MyAppointmentsTab">
+            <ShellContent Route="MyAppointmentsPage" ContentTemplate="{DataTemplate pages:MyAppointmentsPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="اتصل بنا" Icon="tab_contact.svg" Route="ContactUsTab">
+            <ShellContent Route="ContactUsPage" ContentTemplate="{DataTemplate pages:ContactUsPage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="الملف الشخصي" Icon="tab_profile.svg" Route="ProfileTab">
+            <ShellContent Route="ProfilePage" ContentTemplate="{DataTemplate pages:ProfilePage}" Shell.NavBarIsVisible="False" />
+        </Tab>
+    </TabBar>
+
+</Shell>

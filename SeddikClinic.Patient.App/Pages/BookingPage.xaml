@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
+             xmlns:dto="clr-namespace:SeddikClinic.Core.DTOs.Appointments;assembly=SeddikClinic.Core"
+             x:Class="SeddikClinic.Patient.App.Pages.BookingPage"
+             x:DataType="vm:BookingViewModel"
+             BackgroundColor="#F8FAFC"
+             FlowDirection="RightToLeft"
+             Title="حجز موعد">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <!-- Step Progress Indicator (Hidden on Success) -->
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" IsVisible="{Binding IsStepSuccess, Converter={x:StaticResource BoolToInvertedBoolConverter}}">
+                <Border BackgroundColor="{Binding IsStep1, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#0284C7|#0284C7'}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="0"
+                        HeightRequest="5" />
+                <Border Grid.Column="1"
+                        BackgroundColor="{Binding IsStep2, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#0284C7|#E2E8F0'}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="0"
+                        HeightRequest="5" />
+                <Border Grid.Column="2"
+                        BackgroundColor="{Binding IsStep3, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#0284C7|#E2E8F0'}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="0"
+                        HeightRequest="5" />
+            </Grid>
+
+            <!-- STEP 1: Select Service -->
+            <VerticalStackLayout Spacing="14" IsVisible="{Binding IsStep1}">
+                <Label Text="الخطوة الأولى: اختر الخدمة الطبية" FontSize="17" FontAttributes="Bold" TextColor="#0F172A" />
+
+                <CollectionView ItemsSource="{Binding Services}" SelectionMode="Single" SelectedItem="{Binding SelectedService}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="dto:ClinicServiceDto">
+                            <Border BackgroundColor="White"
+                                    StrokeShape="RoundRectangle 16"
+                                    StrokeThickness="1"
+                                    Stroke="#E2E8F0"
+                                    Padding="16"
+                                    Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold" TextColor="#0F172A" />
+                                        <Label Text="{Binding Description}" FontSize="12" TextColor="#64748B" MaxLines="2" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding DisplayPriceText}"
+                                           FontSize="14"
+                                           FontAttributes="Bold"
+                                           TextColor="{Binding ShowPrice, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#0284C7|#64748B'}"
+                                           VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Error Message -->
+                <Border BackgroundColor="#FEF2F2" StrokeShape="RoundRectangle 10" StrokeThickness="0" Padding="12,8"
+                        IsVisible="{Binding ErrorMessage, Converter={x:StaticResource StringNotEmptyConverter}}">
+                    <Label Text="{Binding ErrorMessage}" TextColor="#DC2626" FontSize="13" HorizontalOptions="Center" />
+                </Border>
+
+                <Button Text="التالي: اختيار التاريخ والوقت"
+                        Command="{Binding NextStepCommand}"
+                        BackgroundColor="#0284C7"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        FontSize="15"
+                        CornerRadius="14"
+                        HeightRequest="50"
+                        Margin="0,8,0,0" />
+            </VerticalStackLayout>
+
+            <!-- STEP 2: Select Date & Time -->
+            <VerticalStackLayout Spacing="14" IsVisible="{Binding IsStep2}">
+                <Label Text="الخطوة الثانية: حدد تاريخ ووقت الحضور" FontSize="17" FontAttributes="Bold" TextColor="#0F172A" />
+
+                <!-- Date Picker Card -->
+                <Border BackgroundColor="White" StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="#E2E8F0" Padding="16">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="تاريخ الموعد" FontSize="13" FontAttributes="Bold" TextColor="#334155" />
+                        <DatePicker Date="{Binding SelectedDate}"
+                                    MinimumDate="{Binding MinDate}"
+                                    MaximumDate="{Binding MaxDate}"
+                                    FontSize="16"
+                                    TextColor="#0F172A" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Time Slots Grid -->
+                <Label Text="المواعيد المتاحة في العيادة (فترة العمل الرسمية)" FontSize="13" FontAttributes="Bold" TextColor="#334155" Margin="0,6,0,0" />
+                <CollectionView ItemsSource="{Binding AvailableSlots}" SelectionMode="Single" SelectedItem="{Binding SelectedTimeSlot}">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="3" HorizontalItemSpacing="8" VerticalItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Border BackgroundColor="#F1F5F9"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1"
+                                    Stroke="#E2E8F0"
+                                    Padding="8,12"
+                                    HorizontalOptions="Fill">
+                                <Label Text="{Binding}" FontSize="12" FontAttributes="Bold" TextColor="#0F172A" HorizontalOptions="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Selected Slot Preview -->
+                <Border BackgroundColor="#F0FDF4" StrokeShape="RoundRectangle 10" StrokeThickness="0" Padding="12,8"
+                        IsVisible="{Binding SelectedTimeSlot, Converter={x:StaticResource StringNotEmptyConverter}}">
+                    <Label Text="{Binding SelectedTimeSlot, StringFormat='الموعد المختار: {0}'}"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           TextColor="#16A34A"
+                           HorizontalOptions="Center" />
+                </Border>
+
+                <!-- Error Message -->
+                <Border BackgroundColor="#FEF2F2" StrokeShape="RoundRectangle 10" StrokeThickness="0" Padding="12,8"
+                        IsVisible="{Binding ErrorMessage, Converter={x:StaticResource StringNotEmptyConverter}}">
+                    <Label Text="{Binding ErrorMessage}" TextColor="#DC2626" FontSize="13" HorizontalOptions="Center" />
+                </Border>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,8,0,0">
+                    <Button Text="السابق" Command="{Binding PrevStepCommand}" BackgroundColor="#E2E8F0" TextColor="#334155" FontAttributes="Bold" CornerRadius="14" HeightRequest="50" />
+                    <Button Grid.Column="1" Text="التالي: مراجعة الحجز" Command="{Binding NextStepCommand}" BackgroundColor="#0284C7" TextColor="White" FontAttributes="Bold" CornerRadius="14" HeightRequest="50" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- STEP 3: Confirmation Summary -->
+            <VerticalStackLayout Spacing="14" IsVisible="{Binding IsStep3}">
+                <Label Text="الخطوة الثالثة: تأكيد بيانات الحجز" FontSize="17" FontAttributes="Bold" TextColor="#0F172A" />
+
+                <!-- Summary Card -->
+                <Border BackgroundColor="White" StrokeShape="RoundRectangle 20" StrokeThickness="1" Stroke="#E2E8F0" Padding="20">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="ملخص بيانات الموعد" FontSize="15" FontAttributes="Bold" TextColor="#0F172A" />
+
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                            <Label Text="الخدمة:" TextColor="#64748B" FontSize="14" />
+                            <Label Grid.Column="1" Text="{Binding SelectedService.Name}" FontAttributes="Bold" TextColor="#0F172A" FontSize="14" />
+
+                            <Label Grid.Row="1" Text="التاريخ:" TextColor="#64748B" FontSize="14" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedDate, StringFormat='{0:yyyy/MM/dd}'}" FontAttributes="Bold" TextColor="#0F172A" FontSize="14" />
+
+                            <Label Grid.Row="2" Text="الوقت:" TextColor="#64748B" FontSize="14" />
+                            <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedTimeSlot}" FontAttributes="Bold" TextColor="#0284C7" FontSize="14" />
+
+                            <Label Grid.Row="3" Text="الرسوم:" TextColor="#64748B" FontSize="14" />
+                            <Label Grid.Row="3" Grid.Column="1" Text="{Binding SelectedService.DisplayPriceText}" FontAttributes="Bold" TextColor="#16A34A" FontSize="14" />
+                        </Grid>
+
+                        <!-- Health & Chronic Diseases Questionnaire -->
+                        <Border BackgroundColor="#F0F9FF" StrokeShape="RoundRectangle 14" Stroke="#BAE6FD" StrokeThickness="1" Padding="14" Margin="0,6,0,0">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="الاستبيان الطبي وسجل الحساسية (هام لسلامتك)" FontSize="13" FontAttributes="Bold" TextColor="#0369A1" />
+                                <Label Text="يرجى تحديد أي حالة تنطبق عليك:" FontSize="11.5" TextColor="#64748B" />
+
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="8">
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                        <CheckBox IsChecked="{Binding HasDiabetes}" Color="#0284C7" />
+                                        <Label Text="مرض السكري" FontSize="12.5" TextColor="#334155" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+
+                                    <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                        <CheckBox IsChecked="{Binding HasHypertension}" Color="#0284C7" />
+                                        <Label Text="ضغط دم مرتفع" FontSize="12.5" TextColor="#334155" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+
+                                    <HorizontalStackLayout Grid.Row="1" Spacing="6" VerticalOptions="Center">
+                                        <CheckBox IsChecked="{Binding HasHeartOrBloodThinners}" Color="#0284C7" />
+                                        <Label Text="أمراض قلب / سيولة" FontSize="12.5" TextColor="#334155" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+
+                                    <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                        <CheckBox IsChecked="{Binding HasPenicillinAllergy}" Color="#DC2626" />
+                                        <Label Text="حساسية بنسلين" FontSize="12.5" TextColor="#DC2626" FontAttributes="Bold" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+
+                                    <HorizontalStackLayout Grid.Row="2" Grid.ColumnSpan="2" Spacing="6" VerticalOptions="Center">
+                                        <CheckBox IsChecked="{Binding HasOtherAllergy}" Color="#0284C7" />
+                                        <Label Text="حساسية أدوية أخرى أو أمراض مزمنة أخرى" FontSize="12.5" TextColor="#334155" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+
+                                <Border BackgroundColor="White" StrokeShape="RoundRectangle 8" Stroke="#CBD5E1" StrokeThickness="1" Padding="8,4" Margin="0,4,0,0">
+                                    <Entry Text="{Binding MedicalNotes}" Placeholder="أدوية تتناولها حالياً أو توضيحات طبية..." FontSize="12" TextColor="#0F172A" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Label Text="ملاحظات المريض أو سبب الزيارة (اختياري)" FontSize="13" FontAttributes="Bold" TextColor="#334155" Margin="0,4,0,0" />
+                        <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="12,6">
+                            <Editor Text="{Binding Notes}" Placeholder="اكتب أي ملاحظة أو استفسار للطبيب..." HeightRequest="60" AutoSize="TextChanges" FontSize="13" TextColor="#0F172A" />
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Error Message -->
+                <Border BackgroundColor="#FEF2F2" StrokeShape="RoundRectangle 10" StrokeThickness="0" Padding="12,8"
+                        IsVisible="{Binding ErrorMessage, Converter={x:StaticResource StringNotEmptyConverter}}">
+                    <Label Text="{Binding ErrorMessage}" TextColor="#DC2626" FontSize="13" HorizontalOptions="Center" />
+                </Border>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,8,0,0">
+                    <Button Text="السابق" Command="{Binding PrevStepCommand}" BackgroundColor="#E2E8F0" TextColor="#334155" FontAttributes="Bold" CornerRadius="14" HeightRequest="50" />
+                    <Button Grid.Column="1" Text="تأكيد الحجز الآن" Command="{Binding ConfirmBookingCommand}" BackgroundColor="#16A34A" TextColor="White" FontAttributes="Bold" CornerRadius="14" HeightRequest="50" />
+                </Grid>
+
+                <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="#16A34A" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
+            <!-- STEP 4: Beautiful Professional Success Card -->
+            <VerticalStackLayout Spacing="16" IsVisible="{Binding IsStepSuccess}" Padding="10">
+
+                <Border BackgroundColor="White"
+                        StrokeShape="RoundRectangle 24"
+                        StrokeThickness="1"
+                        Stroke="#BBF7D0"
+                        Padding="24">
+                    <VerticalStackLayout Spacing="16" HorizontalOptions="Center">
+
+                        <!-- Success Icon Badge -->
+                        <Border BackgroundColor="#DCFCE7"
+                                StrokeShape="RoundRectangle 36"
+                                WidthRequest="72"
+                                HeightRequest="72"
+                                HorizontalOptions="Center"
+                                StrokeThickness="0">
+                            <Label Text="✓" FontSize="36" FontAttributes="Bold" TextColor="#16A34A" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+
+                        <Label Text="تم تأكيد الحجز بنجاح"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="#166534"
+                               HorizontalOptions="Center" />
+
+                        <Label Text="تم تسجيل موعدك في سجلات العيادة، نتمنى لك دوام الصحة والعافية"
+                               FontSize="13"
+                               TextColor="#475569"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+
+                        <!-- Details Box -->
+                        <Border BackgroundColor="#F8FAFC"
+                                StrokeShape="RoundRectangle 16"
+                                Stroke="#E2E8F0"
+                                StrokeThickness="1"
+                                Padding="16"
+                                Margin="0,6,0,0">
+                            <VerticalStackLayout Spacing="10">
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
+                                    <Label Text="رقم الحجز:" TextColor="#64748B" FontSize="13" />
+                                    <Label Grid.Column="1" Text="{Binding LastBookingNumber}" FontAttributes="Bold" TextColor="#0284C7" FontSize="14" />
+
+                                    <Label Grid.Row="1" Text="الخدمة:" TextColor="#64748B" FontSize="13" />
+                                    <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedService.Name}" FontAttributes="Bold" TextColor="#0F172A" FontSize="13" />
+
+                                    <Label Grid.Row="2" Text="الموعد:" TextColor="#64748B" FontSize="13" />
+                                    <Label Grid.Row="2" Grid.Column="1" Text="{Binding LastBookingTime}" FontAttributes="Bold" TextColor="#16A34A" FontSize="13" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- Go Home Button -->
+                        <Button Text="العودة للصفحة الرئيسية"
+                                Command="{Binding FinishAndGoHomeCommand}"
+                                BackgroundColor="#0284C7"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="15"
+                                CornerRadius="14"
+                                HeightRequest="50"
+                                Margin="0,10,0,0" />
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
