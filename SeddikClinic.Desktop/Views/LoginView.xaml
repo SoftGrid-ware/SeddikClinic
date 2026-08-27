@@ -1,0 +1,57 @@
+<UserControl x:Class="SeddikClinic.Desktop.Views.LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft"
+             Background="#F8FAFC">
+
+    <Grid>
+        <!-- Centered Luxury Login Card -->
+        <Border Width="460" Background="#FFFFFF" CornerRadius="20" Padding="36" BorderBrush="#E2E8F0" BorderThickness="1" Effect="{StaticResource HeaderShadow}" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel>
+                <!-- Brand / Logo Header -->
+                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,24">
+                    <Border Width="64" Height="64" Background="#E0F2FE" CornerRadius="18" HorizontalAlignment="Center" Margin="0,0,0,12">
+                        <TextBlock Text="🦷" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="عيادة د. صديق" FontSize="24" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="تسجيل الدخول للمنظومة الطبية والمالية" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <!-- Error Message Banner -->
+                <Border x:Name="ErrorBanner" Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,18" Visibility="Collapsed">
+                    <TextBlock x:Name="ErrorText" Text="اسم المستخدم أو كلمة المرور غير صحيحة" Foreground="#DC2626" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                </Border>
+
+                <!-- Username Input -->
+                <StackPanel Margin="0,0,0,14">
+                    <TextBlock Text="اسم المستخدم:" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" Margin="0,0,0,6"/>
+                    <TextBox x:Name="UsernameInput" Text="admin" Height="44" Style="{StaticResource ModernTextBox}"/>
+                </StackPanel>
+
+                <!-- Password Input -->
+                <StackPanel Margin="0,0,0,22">
+                    <TextBlock Text="كلمة المرور:" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" Margin="0,0,0,6"/>
+                    <PasswordBox x:Name="PasswordInput" Password="admin123" Height="44" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1.5" Foreground="#0F172A" Padding="12,0" VerticalContentAlignment="Center">
+                        <PasswordBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="10"/>
+                            </Style>
+                        </PasswordBox.Resources>
+                    </PasswordBox>
+                </StackPanel>
+
+                <!-- Login Button -->
+                <Button x:Name="LoginBtn" Content="تسجيل الدخول 🚀" Click="LoginBtn_Click" Height="46" Background="#0284C7" Style="{StaticResource PrimaryButtonStyle}" FontSize="14" FontWeight="Bold" Margin="0,0,0,18"/>
+
+                <Separator Margin="0,0,0,16" Background="#F1F5F9"/>
+
+                <!-- Fast Login Quick Buttons for convenience -->
+                <TextBlock Text="أو اختر حساباً للدخول السريع:" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <UniformGrid Columns="2">
+                    <Button Content="👑 دخول كمدير (admin)" Click="FastLoginAdmin_Click" Style="{StaticResource OutlineButtonStyle}" Height="38" Margin="0,0,6,0" FontSize="11" FontWeight="SemiBold"/>
+                    <Button Content="👤 دخول كمساعد (assistant)" Click="FastLoginAssistant_Click" Style="{StaticResource OutlineButtonStyle}" Height="38" Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold"/>
+                </UniformGrid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

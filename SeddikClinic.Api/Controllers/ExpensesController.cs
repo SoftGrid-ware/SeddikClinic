@@ -120,6 +120,17 @@ public class ExpensesController : ControllerBase
     }
 
     /// <summary>
+    /// حذف مصروف نهائياً
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var success = await _expenseService.DeleteExpenseAsync(id);
+        if (!success) return NotFound(new { message = "المصروف غير موجود." });
+        return Ok(new { message = "تم حذف المصروف بنجاح." });
+    }
+
+    /// <summary>
     /// رفع إيصال أو مستند مرفق للمصروف مع ضغطه سحابياً
     /// </summary>
     [HttpPost("{id:guid}/attachments")]
@@ -150,6 +161,19 @@ public class ExpensesController : ControllerBase
     {
         var categories = await _expenseService.GetCategoriesAsync();
         return Ok(categories);
+    }
+
+    /// <summary>
+    /// إضافة تصنيف مصروف جديد
+    /// </summary>
+    [HttpPost("categories")]
+    public async Task<ActionResult<ExpenseCategoryDto>> CreateCategory([FromBody] CreateCategoryRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NameAr))
+            return BadRequest(new { message = "يرجى كتابة اسم التصنيف." });
+
+        var category = await _expenseService.CreateCategoryAsync(request.NameAr.Trim(), request.IsDirectCost);
+        return Ok(category);
     }
 
     /// <summary>
@@ -223,4 +247,10 @@ public class ExpensesController : ControllerBase
 
     private string GetCurrentUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "SYSTEM_DOCTOR";
     private string GetCurrentUserName() => User.FindFirst(ClaimTypes.Name)?.Value ?? "د. صديق";
+}
+
+public class CreateCategoryRequest
+{
+    public string NameAr { get; set; } = string.Empty;
+    public bool IsDirectCost { get; set; }
 }

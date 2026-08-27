@@ -1,0 +1,288 @@
+<UserControl x:Class="SeddikClinic.Desktop.Views.ClinicServicesManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft"
+             Background="#F8FAFC">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Quick Action & Stats Cards -->
+            <RowDefinition Height="*"/>    <!-- Services Table Card -->
+        </Grid.RowDefinitions>
+
+        <!-- Top Header Bar -->
+        <Border Grid.Row="0" Background="#FFFFFF" CornerRadius="16" Padding="18,14" Margin="0,0,0,20" BorderBrush="#E2E8F0" BorderThickness="1" Effect="{StaticResource HeaderShadow}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="#E0F2FE" CornerRadius="10" Padding="10,8" Margin="0,0,15,0" VerticalAlignment="Center">
+                        <TextBlock Text="🏷️" FontSize="18"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="إدارة الخدمات الطبية والأسعار" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="التحكم في قائمة الخدمات المتاحة وتحديد أسعار الكشف والعلاجات للمنظومة" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="تحديث القائمة 🔄" Click="RefreshServices_Click" Style="{StaticResource OutlineButtonStyle}" Height="40" Margin="0,0,10,0"/>
+                    <Button Content="+ إضافة تصنيف خدمات 📁" Click="ToggleAddCategoryModal_Click" Height="40" Background="#EDE9FE" Foreground="#7C3AED" FontWeight="Bold" BorderBrush="#DDD6FE" BorderThickness="1" Padding="14,0" Margin="0,0,10,0" Style="{StaticResource OutlineButtonStyle}" Cursor="Hand"/>
+                    <Button Content="+ إضافة خدمة جديدة ➕" Click="ToggleAddServicePanel_Click" Height="40" Background="#0284C7" Style="{StaticResource PrimaryButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Quick Consultation Price Control Card -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Quick Consultation Price Card -->
+            <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="14" Padding="18" Margin="0,0,14,0" BorderBrush="#BAE6FD" BorderThickness="1.5" Effect="{StaticResource CardShadow}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Border Background="#E0F2FE" CornerRadius="8" Padding="6" Margin="0,0,8,0">
+                            <TextBlock Text="🩺" FontSize="14"/>
+                        </Border>
+                        <TextBlock Text="سعر الكشف والاستشارة الافتراضي" FontWeight="Bold" FontSize="13.5" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Text="يتم تطبيق هذا السعر تلقائياً عند تسجيل أي حجز كشف جديد:" FontSize="11" Foreground="#64748B" Margin="0,0,0,10"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="QuickConsultationInput" Height="40" Width="140" Style="{StaticResource ModernTextBox}" Margin="0,0,10,0" FontWeight="Bold" FontSize="14"/>
+                        <Button Content="تحديث سعر الكشف 💾" Click="SaveConsultationPrice_Click" Height="40" Padding="16,0" Background="#0284C7" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Add New Service Inline Form -->
+            <Border x:Name="AddServicePanel" Grid.Column="1" Background="#FFFFFF" CornerRadius="14" Padding="18" BorderBrush="#E2E8F0" BorderThickness="1" Effect="{StaticResource CardShadow}" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="✨ إضافة خدمة طبية جديدة إلى قائمة العيادة" FontWeight="Bold" FontSize="13.5" Foreground="#0F172A" Margin="0,0,0,12"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.3*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="اسم الخدمة الطبية:" FontSize="11" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="NewServiceNameInput" Height="40" Style="{StaticResource ModernTextBox}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                            <TextBlock Text="السعر الافتراضي (ج.م):" FontSize="11" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="NewServicePriceInput" Text="500" Height="40" Style="{StaticResource ModernTextBox}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                            <TextBlock Text="التصنيف:" FontSize="11" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="NewServiceCategoryCombo" Height="40" Grid.Column="0" Margin="0,0,4,0"/>
+                                <Button Grid.Column="1" Content="➕" Click="ToggleAddCategoryModal_Click" Height="40" Width="36" Padding="0" Background="#EDE9FE" Foreground="#7C3AED" FontWeight="Bold" BorderThickness="0" Cursor="Hand" ToolTip="إضافة تصنيف جديد"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3" VerticalAlignment="Bottom">
+                            <Button Content="حفظ الخدمة ✅" Click="SaveNewService_Click" Height="40" Padding="18,0" Background="#10B981" Style="{StaticResource PrimaryButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Services DataGrid Card -->
+        <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" Effect="{StaticResource CardShadow}">
+            <DataGrid x:Name="ServicesGrid" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="56" Background="Transparent" BorderThickness="0">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#F8FAFC"/>
+                        <Setter Property="Foreground" Value="#475569"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="14,12"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <!-- Service Name -->
+                    <DataGridTemplateColumn Header="اسم الخدمة الطبية" Width="2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel VerticalAlignment="Center" Margin="10,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13.5" Foreground="#0F172A"/>
+                                    <TextBlock Text="{Binding Category}" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Price Badge -->
+                    <DataGridTemplateColumn Header="السعر المعتمد" Width="1.2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="12,5" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DefaultPrice, StringFormat='{}{0:N0} ج.م'}" FontWeight="Bold" FontSize="13" Foreground="#15803D"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Category -->
+                    <DataGridTemplateColumn Header="التصنيف" Width="1.2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,4" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Category}" FontSize="12" Foreground="#475569" FontWeight="Medium"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Actions -->
+                    <DataGridTemplateColumn Header="الإجراءات" Width="160">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Button Content="✏️ تعديل" Click="EditService_Click" ToolTip="تعديل السعر والاسم" Background="#EFF6FF" Foreground="#2563EB" FontWeight="SemiBold" BorderThickness="0" Padding="10,4" Height="30" Margin="0,0,6,0" Cursor="Hand">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="7"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+
+                                    <Button Content="🗑️ حذف" Click="DeleteService_Click" ToolTip="حذف الخدمة من قائمة العيادة" Background="#FEE2E2" Foreground="#DC2626" FontWeight="SemiBold" BorderThickness="0" Padding="8,4" Height="30" Cursor="Hand">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="7"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Modal: تعديل خدمة طبية وسعرها -->
+        <Grid x:Name="EditServiceModal" Grid.Row="0" Grid.RowSpan="3" Background="#7F000000" Visibility="Collapsed">
+            <Border Background="#FFFFFF" CornerRadius="16" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" Effect="{StaticResource CardShadow}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Background="#EFF6FF" CornerRadius="8" Padding="8" Margin="0,0,10,0">
+                            <TextBlock Text="✏️" FontSize="16"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="تعديل الخدمة الطبية والسعر" FontSize="16" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="تعديل السعر المعتمد للخدمة في المنظومة" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="اسم الخدمة الطبية:" FontWeight="SemiBold" FontSize="12" Foreground="#475569" Margin="0,0,0,6"/>
+                    <TextBox x:Name="ModalServiceNameInput" Height="40" Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="السعر المعتمد (ج.م):" FontWeight="SemiBold" FontSize="12" Foreground="#475569" Margin="0,0,0,6"/>
+                    <TextBox x:Name="ModalServicePriceInput" Height="40" Style="{StaticResource ModernTextBox}" Margin="0,0,0,20"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="حفظ التعديلات ✅" Click="SaveModalEdit_Click" Height="40" Padding="20,0" Background="#2563EB" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,0"/>
+                        <Button Content="إلغاء ✖" Click="CancelModalEdit_Click" Height="40" Style="{StaticResource OutlineButtonStyle}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Modal: إضافة تصنيف خدمات جديد (Add Service Category Modal) -->
+        <Grid x:Name="AddServiceCategoryModal" Grid.Row="0" Grid.RowSpan="3" Background="#7F000000" Visibility="Collapsed">
+            <Border Background="#FFFFFF" CornerRadius="20" Width="460" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" Effect="{StaticResource CardShadow}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="12" Background="#EDE9FE" BorderBrush="#DDD6FE" BorderThickness="1" Margin="0,0,12,0" VerticalAlignment="Center">
+                            <TextBlock Text="📁" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="إضافة تصنيف خدمات طبية جديد" FontSize="16.5" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="إضافة مجموعة جديدة لتصنيف علاجات وخدمات العيادة" FontSize="11.5" Foreground="#64748B" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Content="✕" Click="CloseAddCategoryModal_Click" Width="32" Height="32" Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Cursor="Hand" VerticalAlignment="Top">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="10"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="اسم تصنيف الخدمة الجديد:" FontSize="12.5" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="NewCategoryNameInput" Height="40" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                        <Button Grid.Column="1" Content="+ إضافة" Click="SaveServiceCategory_Click" Height="40" Padding="18,0" Background="#10B981" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+
+                    <TextBlock Text="التصنيفات الحالية (انقر للحذف):" FontSize="12.5" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <Border Background="#F8FAFC" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1" Padding="10" MaxHeight="180" Margin="0,0,0,16">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="CategoriesItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FFFFFF" CornerRadius="8" Padding="10,6" Margin="0,0,0,6" BorderBrush="#E2E8F0" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding}" FontWeight="SemiBold" FontSize="12.5" Foreground="#334155" VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" Content="🗑️ حذف" Click="DeleteCategory_Click" Tag="{Binding}" Background="#FEE2E2" Foreground="#DC2626" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Padding="8,3" Cursor="Hand">
+                                                    <Button.Resources>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="CornerRadius" Value="6"/>
+                                                        </Style>
+                                                    </Button.Resources>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="إغلاق النافذة" Click="CloseAddCategoryModal_Click" Height="40" Padding="20,0" Style="{StaticResource OutlineButtonStyle}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

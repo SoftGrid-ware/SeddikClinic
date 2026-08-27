@@ -1,0 +1,49 @@
+<UserControl x:Class="SeddikClinic.Desktop.Views.AboutSystemView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft"
+             Background="#F8FAFC">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="30">
+        <StackPanel MaxWidth="700" HorizontalAlignment="Center" Margin="0,20">
+
+            <!-- Clinic Header Card -->
+            <Border Background="#FFFFFF" CornerRadius="20" Padding="30" BorderBrush="#E2E8F0" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.04"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <Border Width="70" Height="70" Background="#E0F2FE" CornerRadius="20" HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <TextBlock Text="+" FontSize="36" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <TextBlock Text="منظومة عيادة د. صديق الموحدة" FontSize="22" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="الإصدار الموحد الشامل لإدارة المواعيد والعمليات الطبية والمالية وتطبيقات الهاتف" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+
+                    <Separator Margin="0,18,0,14" Background="#F1F5F9"/>
+
+                    <TextBlock Text="جميع الحقوق محفوظة لعيادة د. صديق التخصصية" FontSize="13" FontWeight="SemiBold" Foreground="#334155" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Developer & Technical Support Card -->
+            <Border Background="#FFFFFF" CornerRadius="20" Padding="30" Margin="0,20,0,0" BorderBrush="#E2E8F0" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.04"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="التطوير والدعم الفني للبرنامج والتطبيقات" FontSize="16" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="تم تصميم وبرمجة المنظومة وتطبيقات الهاتف (أندرويد) بواسطة:" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+
+                    <TextBlock Text="د. عبدالرحمن شعبان محمد" FontSize="20" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center" Margin="0,12,0,4"/>
+                    <TextBlock Text="01009563353" FontSize="18" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="نسخ رقم الهاتف" Click="CopyPhone_Click" Style="{StaticResource PrimaryButtonStyle}" Height="40" Padding="20,0" Margin="0,0,10,0"/>
+                        <Button Content="مراسلة واتساب" Click="OpenWhatsApp_Click" Style="{StaticResource OutlineButtonStyle}" Height="40" Padding="20,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

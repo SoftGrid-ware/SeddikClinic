@@ -1,0 +1,173 @@
+﻿<Window x:Class="SeddikClinic.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="منظومة عيادة د. صديق الموحدة - إدارة المواعيد والعمليات الطبية والمالية" 
+        Height="840" Width="1340" 
+        WindowStartupLocation="CenterScreen" 
+        FlowDirection="RightToLeft"
+        Background="#F8FAFC">
+
+    <Grid>
+        <!-- Layout with Sidebar and Dynamic View Container -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="SidebarColumn" Width="280"/> <!-- Luxury Sidebar -->
+            <ColumnDefinition Width="*"/>   <!-- Dynamic View Container -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Luxury White Sidebar (Visible after Login) -->
+        <Border x:Name="SidebarBorder" Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Effect="{StaticResource HeaderShadow}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Logo / Clinic Header -->
+                    <RowDefinition Height="Auto"/> <!-- Current User Profile Badge Card -->
+                    <RowDefinition Height="*"/>    <!-- Navigation Buttons -->
+                    <RowDefinition Height="Auto"/> <!-- Cloud Status Footer & Logout -->
+                </Grid.RowDefinitions>
+
+                <!-- Clinic Logo Header -->
+                <StackPanel Grid.Row="0" Margin="22,24,22,18">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="42" Height="42" Background="#E0F2FE" CornerRadius="12" Margin="0,0,12,0">
+                            <TextBlock Text="+" FontSize="24" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="عيادة د. صديق" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="المنظومة الموحدة الشاملة" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Separator Margin="0,16,0,0" Background="#F1F5F9"/>
+                </StackPanel>
+
+                <!-- Current User Profile Badge Card -->
+                <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="12" Padding="14,12" Margin="16,0,16,18" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock x:Name="CurrentUserFullNameText" Text="د. صديق" FontSize="13" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock x:Name="CurrentUserRoleBadgeText" Text="مدير المنظومة" FontSize="11" Foreground="#0284C7" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Content="خروج" Click="LogoutBtn_Click" Style="{StaticResource OutlineButtonStyle}" Height="30" Padding="8,2" FontSize="11" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Navigation Menu (Dynamic Visibility by Permissions) -->
+                <StackPanel Grid.Row="2" Margin="14,0">
+                    <!-- Nav Item 1: Appointments & Booking -->
+                    <Button x:Name="NavAppointmentsBtn" Click="NavAppointments_Click" Height="44" Background="#E0F2FE" Foreground="#0284C7" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="المواعيد والحجوزات" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 2: Patient Directory -->
+                    <Button x:Name="NavPatientsBtn" Click="NavPatients_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="سجل المرضى" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 3: Financial Dashboard (Protected by Permission) -->
+                    <Button x:Name="NavDashboardBtn" Click="NavDashboard_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="الأرباح والمصروفات" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 4: Expenses -->
+                    <Button x:Name="NavExpensesBtn" Click="NavExpenses_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="إدارة المصروفات" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 5: Invoices & Billing -->
+                    <Button x:Name="NavInvoicesBtn" Click="NavInvoices_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="الفواتير والتحصيل" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 6: User & Permissions Management (Manager Only) -->
+                    <Button x:Name="NavUsersBtn" Click="NavUsers_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="المستخدمين والصلاحيات" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 7: Clinic Services & Pricing (Manager Only) -->
+                    <Button x:Name="NavServicesBtn" Click="NavServices_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="الخدمات والأسعار" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <!-- Nav Item 8: About & Developer Credits -->
+                    <Button x:Name="NavAboutBtn" Click="NavAbout_Click" Height="44" Background="Transparent" Foreground="#64748B" BorderThickness="0" Margin="0,0,0,5" Cursor="Hand" HorizontalContentAlignment="Right" Padding="14,0">
+                        <TextBlock Text="حول المنظومة والدعم" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button.Resources>
+                            <Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+
+                <!-- Bottom Live Status & Developer Credits Footer Card -->
+                <Border Grid.Row="3" Background="#F8FAFC" CornerRadius="12" Padding="12" Margin="16,0,16,16" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#10B981" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="CloudStatusText" Text="أونلاين (متصل بالإنترنت)" FontSize="11" Foreground="#0F172A" FontWeight="Bold"/>
+                        </StackPanel>
+                        <TextBlock Text="العيادة جاهزة للعمل والمزامنة" FontSize="10" Foreground="#10B981" FontWeight="SemiBold" Margin="0,2,0,4"/>
+                        <Separator Background="#E2E8F0" Margin="0,4"/>
+                        <TextBlock Text="برمجة: د. عبدالرحمن شعبان" FontSize="10" Foreground="#64748B" FontWeight="SemiBold"/>
+                        <TextBlock Text="01009563353" FontSize="10" Foreground="#0284C7" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Main Dynamic View Container -->
+        <ContentControl x:Name="MainContentContainer" Grid.Column="1"/>
+
+        <!-- Startup Loading Screen Overlay -->
+        <Grid x:Name="StartupLoadingOverlay" Grid.Column="0" Grid.ColumnSpan="2" Background="#FFFFFF" Visibility="Visible">
+            <Border Background="#FFFFFF" CornerRadius="24" Width="480" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="40,36" BorderBrush="#E2E8F0" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.09"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <Border Width="80" Height="80" Background="#F0F9FF" BorderBrush="#BAE6FD" BorderThickness="1.5" CornerRadius="24" HorizontalAlignment="Center" Margin="0,0,0,18">
+                        <TextBlock Text="+" FontSize="42" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <TextBlock Text="عيادة د. صديق" FontSize="26" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+                    <TextBlock Text="المنظومة الطبية والمالية الموحدة" FontSize="14" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+
+                    <!-- Animated Progress Bar -->
+                    <ProgressBar IsIndeterminate="True" Height="6" Width="360" Background="#F1F5F9" Foreground="#0284C7" BorderThickness="0" Margin="0,20,0,14">
+                        <ProgressBar.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="3"/>
+                            </Style>
+                        </ProgressBar.Resources>
+                    </ProgressBar>
+
+                    <!-- Dynamic Loading Status Text -->
+                    <TextBlock x:Name="StartupStatusText" Text="جاري بدء التشغيل وتجهيز المنظومة..." FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" FontWeight="Medium"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

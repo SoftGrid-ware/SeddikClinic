@@ -33,8 +33,11 @@ public class RequireFinancialPermissionAttribute : Attribute, IAuthorizationFilt
         // إذا كان هناك Token يتم فحص الصلاحيات بدقة
         if (user.Identity?.IsAuthenticated == true)
         {
+            var isManager = user.IsInRole("Manager") || user.IsInRole("Admin") || user.IsInRole("Doctor");
+            var canViewFinancials = user.HasClaim(c => c.Type == "CanViewFinancials" && c.Value.Equals("True", StringComparison.OrdinalIgnoreCase));
             var hasClaim = user.HasClaim(c => c.Type == "Permission" && (c.Value == _permission || c.Value == "Admin.SuperUser"));
-            if (!hasClaim && !user.IsInRole("Doctor") && !user.IsInRole("Admin"))
+
+            if (!isManager && !canViewFinancials && !hasClaim)
             {
                 context.Result = new ObjectResult(new { message = "ليس لديك الصلاحية المالية الكافية لتنفيذ هذا الإجراء." })
                 {

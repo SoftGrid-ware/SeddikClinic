@@ -1,0 +1,54 @@
+<Window x:Class="SeddikClinic.Desktop.Views.LoginReAuthDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="التحقق المالي والأمان - د. صديق" 
+        Height="380" Width="440" 
+        WindowStartupLocation="CenterScreen" 
+        ResizeMode="NoResize" 
+        FlowDirection="RightToLeft"
+        Background="#FFFFFF">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,20">
+            <Border Width="50" Height="50" Background="#E0F2FE" CornerRadius="25" HorizontalAlignment="Center" Margin="0,0,0,10">
+                <TextBlock Text="🔒" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="التحقق الأمني للطبيب" FontSize="18" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+            <TextBlock Text="أدخل رمز PIN أو كلمة المرور لفتح البيانات المالية" FontSize="12" Foreground="#64748B" Margin="0,4,0,0" TextAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Password Input -->
+        <StackPanel Grid.Row="1" Margin="0,5,0,15">
+            <TextBlock Text="كلمة المرور / الرمز السري:" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" Margin="0,0,0,6"/>
+            <PasswordBox x:Name="PasswordInput" Height="42" FontSize="16" Background="#F8FAFC" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1.5" Padding="12,8" KeyDown="PasswordInput_KeyDown">
+                <PasswordBox.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="8"/>
+                    </Style>
+                </PasswordBox.Resources>
+            </PasswordBox>
+            <TextBlock x:Name="ErrorMessageText" Text="كلمة المرور غير صحيحة، يرجى المحاولة مرة أخرى." Foreground="#DC2626" FontSize="12" Visibility="Collapsed" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <!-- Quick Biometric Fingerprint Button -->
+        <Border Grid.Row="2" Background="#F0FDF4" CornerRadius="10" Padding="12" Margin="0,0,0,20" BorderBrush="#BBF7D0" BorderThickness="1" Cursor="Hand" MouseDown="BiometricQuickAuth_Click">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="👆" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="تأكيد سريع بالبصمة (Windows Hello)" Foreground="#15803D" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button x:Name="ConfirmBtn" Content="تأكيد ودخول" Width="140" Height="42" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0" Click="ConfirmBtn_Click"/>
+            <Button x:Name="CancelBtn" Content="إلغاء" Width="100" Height="42" Style="{StaticResource OutlineButtonStyle}" Click="CancelBtn_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
