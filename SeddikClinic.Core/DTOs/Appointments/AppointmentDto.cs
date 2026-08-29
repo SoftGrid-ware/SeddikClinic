@@ -52,7 +52,10 @@ public class AppointmentDto
         _ => "#F1F5F9"
     };
     public decimal TotalFees { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal NetFees => Math.Max(0, TotalFees - DiscountAmount);
     public decimal DepositAmount { get; set; }
+    public decimal RemainingAmount => Math.Max(0, NetFees - DepositAmount);
     public bool IsDepositPaid { get; set; }
     public string? Notes { get; set; }
     public string? ReasonForVisit { get; set; }
@@ -76,6 +79,7 @@ public class CreateAppointmentDto
     public int DurationMinutes { get; set; } = 30;
     public string ServiceType { get; set; } = "كشف عام";
     public decimal TotalFees { get; set; }
+    public decimal DiscountAmount { get; set; }
     public decimal DepositAmount { get; set; }
     public string? Notes { get; set; }
     public string? ReasonForVisit { get; set; }
@@ -91,6 +95,7 @@ public class UpdateAppointmentServiceDto
 {
     public string ServiceType { get; set; } = string.Empty;
     public decimal? TotalFees { get; set; }
+    public decimal? DiscountAmount { get; set; }
     public decimal? DepositAmount { get; set; }
     public string? Notes { get; set; }
 }

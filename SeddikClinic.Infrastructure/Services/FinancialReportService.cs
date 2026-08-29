@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using SeddikClinic.Core.DTOs.Financial;
+using SeddikClinic.Core.Entities.Appointments;
 using SeddikClinic.Core.Entities.Billing;
 using SeddikClinic.Core.Entities.Financial;
 using SeddikClinic.Core.Enums;
@@ -19,17 +20,40 @@ public class FinancialReportService : IFinancialReportService
         _dbContext = dbContext;
     }
 
+    private static decimal GetAppointmentCollectedAmount(Appointment a)
+    {
+        if (a.Status == AppointmentStatus.Cancelled) return 0m;
+
+        // الإيراد المحصل = فقط وحصرياً ما تم تحصيله وسداده كاش/عربون فعلياً
+        var netFees = Math.Max(0, a.TotalFees - a.DiscountAmount);
+        if (a.DepositAmount > 0)
+        {
+            return Math.Min(a.DepositAmount, netFees);
+        }
+
+        // إذا كان المحصل = 0، فالإيراد = 0 تماماً ويذهب بالكامل إلى المبالغ المستحقة غير المحصلة (المتبقي)
+        return 0m;
+    }
+
+    private static decimal GetAppointmentRemainingAmount(Appointment a)
+    {
+        if (a.Status == AppointmentStatus.Cancelled) return 0m;
+        var netFees = Math.Max(0, a.TotalFees - a.DiscountAmount);
+        var collected = GetAppointmentCollectedAmount(a);
+        return Math.Max(0, netFees - collected);
+    }
+
     public async Task<FinancialDashboardDto> GetDashboardMetricsAsync(FinancialFilterDto filter)
     {
-        var now = DateTime.UtcNow;
-        var todayStart = DateTime.SpecifyKind(now.Date, DateTimeKind.Utc);
-        var todayEnd = todayStart.AddDays(1).AddTicks(-1);
+        var localToday = DateTime.Today;
+        var todayStart = DateTime.SpecifyKind(localToday, DateTimeKind.Utc);
+        var todayEnd = todayStart.AddDays(1);
 
-        var currentMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var currentMonthEnd = currentMonthStart.AddMonths(1).AddTicks(-1);
+        var currentMonthStart = new DateTime(localToday.Year, localToday.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var currentMonthEnd = currentMonthStart.AddMonths(1);
 
         var prevMonthStart = currentMonthStart.AddMonths(-1);
-        var prevMonthEnd = currentMonthStart.AddTicks(-1);
+        var prevMonthEnd = currentMonthStart;
 
         // 1. تحديد نطاق الفترة المطلوبة بحسب الفلتر
         DateTime periodStart;
@@ -38,7 +62,7 @@ public class FinancialReportService : IFinancialReportService
         if (filter.StartDate.HasValue && filter.EndDate.HasValue)
         {
             periodStart = DateTime.SpecifyKind(filter.StartDate.Value.Date, DateTimeKind.Utc);
-            periodEnd = DateTime.SpecifyKind(filter.EndDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+            periodEnd = DateTime.SpecifyKind(filter.EndDate.Value.Date.AddDays(1), DateTimeKind.Utc);
         }
         else
         {
@@ -49,13 +73,13 @@ public class FinancialReportService : IFinancialReportService
                     periodEnd = todayEnd;
                     break;
                 case "week":
-                    var diff = (7 + (int)now.DayOfWeek - (int)DayOfWeek.Saturday) % 7;
-                    periodStart = DateTime.SpecifyKind(now.Date.AddDays(-diff), DateTimeKind.Utc);
-                    periodEnd = periodStart.AddDays(7).AddTicks(-1);
+                    var diff = (7 + (int)localToday.DayOfWeek - (int)DayOfWeek.Saturday) % 7;
+                    periodStart = DateTime.SpecifyKind(localToday.AddDays(-diff), DateTimeKind.Utc);
+                    periodEnd = periodStart.AddDays(7);
                     break;
                 case "year":
-                    periodStart = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                    periodEnd = periodStart.AddYears(1).AddTicks(-1);
+                    periodStart = new DateTime(localToday.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    periodEnd = periodStart.AddYears(1);
                     break;
                 default: // month
                     periodStart = currentMonthStart;
@@ -65,12 +89,12 @@ public class FinancialReportService : IFinancialReportService
         }
 
         // =========================================================
-        // حسابات اليوم (Today Metrics)
+        // حسابات اليوم (Today Metrics - المقبوضات والمصروفات النقدية لليوم)
         // =========================================================
-        var todayPaymentsQuery = _dbContext.PatientPayments.Where(p => p.PaymentDate >= todayStart && p.PaymentDate <= todayEnd);
-        var todayExpensesQuery = _dbContext.Expenses.Where(e => e.PaymentDate >= todayStart && e.PaymentDate <= todayEnd && e.Status == ExpenseStatus.Paid);
-        var todayRefundsQuery = _dbContext.PatientRefunds.Where(r => r.RefundDate >= todayStart && r.RefundDate <= todayEnd);
-        var todayAptQuery = _dbContext.Appointments.Where(a => !a.IsDeleted && a.AppointmentDate.Date == todayStart.Date);
+        var todayPaymentsQuery = _dbContext.PatientPayments.Where(p => p.PaymentDate >= todayStart && p.PaymentDate < todayEnd);
+        var todayExpensesQuery = _dbContext.Expenses.Where(e => e.PaymentDate >= todayStart && e.PaymentDate < todayEnd && e.Status == ExpenseStatus.Paid);
+        var todayRefundsQuery = _dbContext.PatientRefunds.Where(r => r.RefundDate >= todayStart && r.RefundDate < todayEnd);
+        var todayAptQuery = _dbContext.Appointments.Where(a => !a.IsDeleted && a.AppointmentDate >= todayStart && a.AppointmentDate < todayEnd);
 
         if (filter.DoctorId.HasValue)
         {
@@ -88,16 +112,10 @@ public class FinancialReportService : IFinancialReportService
         }
 
         var todayApts = await todayAptQuery.ToListAsync();
+        var todayPayments = await todayPaymentsQuery.ToListAsync();
 
-        // ✅ إيراد اليوم = فقط ما اتحصل فعلاً من الحالات المنتهية
-        // - كاش كامل (DepositAmount = 0 أو = TotalFees): يُحتسب TotalFees
-        // - تقسيط (0 < DepositAmount < TotalFees): يُحتسب العربون المدفوع فقط
-        var todayCompletedRevenue = todayApts
-            .Where(a => a.Status == AppointmentStatus.Completed)
-            .Sum(a => a.DepositAmount > 0 && a.DepositAmount < a.TotalFees
-                ? a.DepositAmount   // تقسيط: فقط ما اتدفع
-                : a.TotalFees);     // كاش: الإجمالي
-        var todayRevenue = todayCompletedRevenue;
+        // إيراد وتحصيل اليوم = كاش وعربون حجوزات اليوم + أي أقساط تم سدادها اليوم
+        var todayRevenue = todayApts.Sum(GetAppointmentCollectedAmount) + todayPayments.Sum(p => p.Amount);
         var todayExpenses = await todayExpensesQuery.SumAsync(e => (decimal?)e.Amount) ?? 0m;
         var todayRefunds = await todayRefundsQuery.SumAsync(r => (decimal?)r.Amount) ?? 0m;
         var todayNetProfit = todayRevenue - todayRefunds - todayExpenses;
@@ -105,11 +123,11 @@ public class FinancialReportService : IFinancialReportService
         // =========================================================
         // حسابات الفترة المحددة (Period Metrics - اليوم / الأسبوع / الشهر / السنة)
         // =========================================================
-        var periodPaymentsQuery = _dbContext.PatientPayments.Where(p => p.PaymentDate >= periodStart && p.PaymentDate <= periodEnd);
-        var periodExpensesQuery = _dbContext.Expenses.Where(e => e.PaymentDate >= periodStart && e.PaymentDate <= periodEnd && e.Status == ExpenseStatus.Paid);
-        var periodRefundsQuery = _dbContext.PatientRefunds.Where(r => r.RefundDate >= periodStart && r.RefundDate <= periodEnd);
-        var periodInvoicesQuery = _dbContext.PatientInvoices.Where(i => i.InvoiceDate >= periodStart && i.InvoiceDate <= periodEnd);
-        var periodAptQuery = _dbContext.Appointments.Where(a => !a.IsDeleted && a.AppointmentDate.Date >= periodStart.Date && a.AppointmentDate.Date <= periodEnd.Date);
+        var periodPaymentsQuery = _dbContext.PatientPayments.Where(p => p.PaymentDate >= periodStart && p.PaymentDate < periodEnd);
+        var periodExpensesQuery = _dbContext.Expenses.Where(e => e.PaymentDate >= periodStart && e.PaymentDate < periodEnd && e.Status == ExpenseStatus.Paid);
+        var periodRefundsQuery = _dbContext.PatientRefunds.Where(r => r.RefundDate >= periodStart && r.RefundDate < periodEnd);
+        var periodInvoicesQuery = _dbContext.PatientInvoices.Where(i => i.InvoiceDate >= periodStart && i.InvoiceDate < periodEnd);
+        var periodAptQuery = _dbContext.Appointments.Where(a => !a.IsDeleted && a.AppointmentDate >= periodStart && a.AppointmentDate < periodEnd);
 
         if (filter.DoctorId.HasValue)
         {
@@ -129,70 +147,55 @@ public class FinancialReportService : IFinancialReportService
         }
 
         var periodApts = await periodAptQuery.ToListAsync();
+        var periodPayments = await periodPaymentsQuery.ToListAsync();
+        var periodInvoices = await periodInvoicesQuery.ToListAsync();
 
-        // ✅ إجمالي الإيرادات المحصلة:
-        // - حجز مكتمل كاش (DepositAmount = TotalFees أو DepositAmount = 0): يُحتسب TotalFees كاملة
-        // - حجز مكتمل بتقسيط (DepositAmount > 0 و < TotalFees): يُحتسب فقط ما اتدفع (DepositAmount)
-        // + أقساط إضافية مسجلة في PatientPayments
-        var completedAptRevenue = periodApts
-            .Where(a => a.Status == AppointmentStatus.Completed)
-            .Sum(a => a.DepositAmount > 0 && a.DepositAmount < a.TotalFees
-                ? a.DepositAmount   // تقسيط: فقط العربون المدفوع
-                : a.TotalFees);     // كاش كامل: الإجمالي
+        // ✅ إجمالي الإيرادات المحصلة نقداً (Actual Cash Collections)
+        var aptsCollectedRevenue = periodApts.Sum(GetAppointmentCollectedAmount);
+        var paymentsCollectedRevenue = periodPayments.Sum(p => p.Amount);
 
-        // الأقساط الإضافية المسددة من جدول PatientPayments (دفعات مسجلة يدوياً)
-        var additionalInstallments = await periodPaymentsQuery
-            .Where(p => p.PaymentType == PaymentType.PartialPayment)
-            .SumAsync(p => (decimal?)p.Amount) ?? 0m;
-
-        // الإيراد = ما اتحصل فعلاً من المنتهية + أقساط مسجلة
-        var periodRevenue = completedAptRevenue + additionalInstallments;
+        // الإيراد المحصل = مجموع ما دخل الصندوق فعلياً (المواعيد المسددة + الدفعات وفواتير المرضى المسجلة في السندات)
+        var periodRevenue = aptsCollectedRevenue + paymentsCollectedRevenue;
 
         var periodExpenses = await periodExpensesQuery.SumAsync(e => (decimal?)e.Amount) ?? 0m;
         var periodRefunds = await periodRefundsQuery.SumAsync(r => (decimal?)r.Amount) ?? 0m;
         var periodNetProfit = periodRevenue - periodRefunds - periodExpenses;
 
-        // ✅ العربون والدفعات الجزئية:
-        // = فقط من دفع عربون جزئي (ليس كاش كامل) — سواء حجز نشط أو منتهي
-        // + أي أقساط إضافية مسددة
+        // ✅ العربون والدفعات الجزئية (Down Payments & Installments Collected):
+        // = مجموع العربين والدفعات المسددة لحالات التقسيط والدفعات الجزئية
         var downPayments = periodApts
-            .Where(a => a.Status != AppointmentStatus.Cancelled
-                     && a.DepositAmount > 0
-                     && a.DepositAmount < a.TotalFees) // عربون جزئي فعلي فقط
-            .Sum(a => a.DepositAmount)
-            + additionalInstallments;
+            .Where(a => a.Status != AppointmentStatus.Cancelled && a.DepositAmount > 0)
+            .Sum(a => Math.Min(a.DepositAmount, Math.Max(0, a.TotalFees - a.DiscountAmount)))
+            + periodPayments.Where(p => p.PaymentType == PaymentType.DownPayment || p.PaymentType == PaymentType.PartialPayment).Sum(p => p.Amount);
 
-        // ✅ المبالغ المستحقة الغير محصلة:
-        // = الحالات النشطة (لم تنته): المتبقي = TotalFees - DepositAmount
-        // + الحالات المنتهية بتقسيط: المتبقي من الإجمالي بعد خصم العربون
-        var periodInvoices = await periodInvoicesQuery.ToListAsync();
+        // ✅ المبالغ المستحقة غير المحصلة (Accounts Receivable / الذمم المدينة):
+        // = المتبقي من إجمالي قيمة الكشوفات والفواتير ولم يتم تحصيله بعد
         var invoiceUncollected = periodInvoices.Sum(i => i.RemainingAmount);
-
-        var aptUncollected = periodApts
-            .Where(a => a.Status != AppointmentStatus.Cancelled
-                     && (a.TotalFees - a.DepositAmount) > 0) // أي حجز فيه متبقي لم يُحصَّل
-            .Sum(a => Math.Max(0, a.TotalFees - a.DepositAmount));
-
+        var aptUncollected = periodApts.Sum(GetAppointmentRemainingAmount);
         var totalUncollected = invoiceUncollected + aptUncollected;
 
-        // الربح التشغيلي التقديري = الإيرادات المحصلة - التكاليف المباشرة
+        // ✅ الربح التشغيلي التقديري:
+        // = قيمة الخدمات الإجمالية (أو المحصلة) مطروحاً منها التكاليف المباشرة للمعمل والمستلزمات
         var directCostCategories = await _dbContext.ExpenseCategories
             .Where(c => c.IsDirectCost)
             .Select(c => c.Id)
             .ToListAsync();
 
         var directCostsSum = await _dbContext.Expenses
-            .Where(e => e.PaymentDate >= periodStart && e.PaymentDate <= periodEnd &&
+            .Where(e => e.PaymentDate >= periodStart && e.PaymentDate < periodEnd &&
                         e.Status == ExpenseStatus.Paid && directCostCategories.Contains(e.CategoryId))
             .SumAsync(e => (decimal?)e.Amount) ?? 0m;
 
-        var estimatedOperatingProfit = periodRevenue - directCostsSum;
+        var totalTreatmentValue = periodApts.Where(a => a.Status != AppointmentStatus.Cancelled).Sum(a => a.TotalFees)
+                                  + periodInvoices.Sum(i => i.TotalAmount);
+
+        var estimatedOperatingProfit = (totalTreatmentValue > 0 ? totalTreatmentValue : periodRevenue) - directCostsSum;
 
         // مقارنة الشهر السابق
-        var prevMonthPaymentsQuery = _dbContext.PatientPayments.Where(p => p.PaymentDate >= prevMonthStart && p.PaymentDate <= prevMonthEnd);
-        var prevMonthExpensesQuery = _dbContext.Expenses.Where(e => e.PaymentDate >= prevMonthStart && e.PaymentDate <= prevMonthEnd && e.Status == ExpenseStatus.Paid);
-        var prevMonthRefundsQuery = _dbContext.PatientRefunds.Where(r => r.RefundDate >= prevMonthStart && r.RefundDate <= prevMonthEnd);
-        var prevAptQuery = _dbContext.Appointments.Where(a => !a.IsDeleted && a.AppointmentDate.Date >= prevMonthStart.Date && a.AppointmentDate.Date <= prevMonthEnd.Date && a.Status == AppointmentStatus.Completed);
+        var prevMonthPaymentsQuery = _dbContext.PatientPayments.Where(p => p.PaymentDate >= prevMonthStart && p.PaymentDate < prevMonthEnd);
+        var prevMonthExpensesQuery = _dbContext.Expenses.Where(e => e.PaymentDate >= prevMonthStart && e.PaymentDate < prevMonthEnd && e.Status == ExpenseStatus.Paid);
+        var prevMonthRefundsQuery = _dbContext.PatientRefunds.Where(r => r.RefundDate >= prevMonthStart && r.RefundDate < prevMonthEnd);
+        var prevAptQuery = _dbContext.Appointments.Where(a => !a.IsDeleted && a.AppointmentDate >= prevMonthStart && a.AppointmentDate < prevMonthEnd);
 
         if (filter.DoctorId.HasValue)
         {
@@ -202,7 +205,8 @@ public class FinancialReportService : IFinancialReportService
             prevAptQuery = prevAptQuery.Where(a => a.DoctorId == filter.DoctorId.Value);
         }
 
-        var prevRevenue = (await prevMonthPaymentsQuery.SumAsync(p => (decimal?)p.Amount) ?? 0m) + (await prevAptQuery.SumAsync(a => (decimal?)a.TotalFees) ?? 0m);
+        var prevAptsList = await prevAptQuery.ToListAsync();
+        var prevRevenue = (await prevMonthPaymentsQuery.SumAsync(p => (decimal?)p.Amount) ?? 0m) + prevAptsList.Sum(GetAppointmentCollectedAmount);
         var prevExpenses = await prevMonthExpensesQuery.SumAsync(e => (decimal?)e.Amount) ?? 0m;
         var prevRefunds = await prevMonthRefundsQuery.SumAsync(r => (decimal?)r.Amount) ?? 0m;
         var prevNetProfit = prevRevenue - prevRefunds - prevExpenses;
@@ -210,13 +214,13 @@ public class FinancialReportService : IFinancialReportService
         var revenueGrowth = prevRevenue > 0 ? Math.Round(((periodRevenue - prevRevenue) / prevRevenue) * 100, 1) : 0m;
         var profitGrowth = prevNetProfit > 0 ? Math.Round(((periodNetProfit - prevNetProfit) / prevNetProfit) * 100, 1) : 0m;
 
-        var daysPassed = Math.Max(1, (periodEnd.Date - periodStart.Date).Days + 1);
+        var daysPassed = Math.Max(1, (periodEnd.Date - periodStart.Date).Days);
         var averageDailyIncome = Math.Round(periodRevenue / daysPassed, 2);
 
-        // أكثر الخدمات تحقيقاً للإيرادات (من الحجوزات المكتملة والفواتير)
+        // أكثر الخدمات تحقيقاً للإيرادات
         var servicesList = new List<TopServiceRevenueDto>();
 
-        foreach (var apt in periodApts.Where(a => a.Status == AppointmentStatus.Completed && !string.IsNullOrWhiteSpace(a.ServiceType)))
+        foreach (var apt in periodApts.Where(a => a.Status != AppointmentStatus.Cancelled && !string.IsNullOrWhiteSpace(a.ServiceType)))
         {
             var parts = apt.ServiceType.Split(new[] { " + ", "+", "،", "," }, StringSplitOptions.RemoveEmptyEntries);
             var feesPerService = parts.Length > 0 ? apt.TotalFees / parts.Length : apt.TotalFees;
@@ -259,18 +263,17 @@ public class FinancialReportService : IFinancialReportService
 
         // أكثر أيام الشهر تحقيقاً للإيرادات
         var arabicCulture = new CultureInfo("ar-SA");
-        var paymentsThisMonth = await periodPaymentsQuery.ToListAsync();
 
         var daysRevenueMap = new Dictionary<DateTime, decimal>();
-        foreach (var p in paymentsThisMonth)
+        foreach (var p in periodPayments)
         {
             var d = p.PaymentDate.Date;
             daysRevenueMap[d] = daysRevenueMap.GetValueOrDefault(d, 0m) + p.Amount;
         }
-        foreach (var a in periodApts.Where(a => a.Status == AppointmentStatus.Completed))
+        foreach (var a in periodApts.Where(a => a.Status != AppointmentStatus.Cancelled))
         {
             var d = a.AppointmentDate.Date;
-            daysRevenueMap[d] = daysRevenueMap.GetValueOrDefault(d, 0m) + a.TotalFees;
+            daysRevenueMap[d] = daysRevenueMap.GetValueOrDefault(d, 0m) + GetAppointmentCollectedAmount(a);
         }
 
         var topDays = daysRevenueMap
@@ -285,25 +288,22 @@ public class FinancialReportService : IFinancialReportService
             .ToList();
 
         // بيانات الرسم البياني اليومي للشهر الحالي
-        var expensesThisMonth = await periodExpensesQuery.ToListAsync();
         var dailyPoints = new List<DailyFinancialPointDto>();
+        var periodExpensesList = await periodExpensesQuery.ToListAsync();
 
-        // جلب حجوزات الشهر بالكامل للرسم البياني
-        var monthApts = await _dbContext.Appointments
-            .Where(a => !a.IsDeleted && a.AppointmentDate.Date >= currentMonthStart.Date && a.AppointmentDate.Date <= currentMonthEnd.Date && a.Status == AppointmentStatus.Completed)
-            .ToListAsync();
-
-        for (int day = 1; day <= DateTime.DaysInMonth(now.Year, now.Month); day++)
+        for (int day = 1; day <= DateTime.DaysInMonth(currentMonthStart.Year, currentMonthStart.Month); day++)
         {
-            var date = new DateTime(now.Year, now.Month, day, 0, 0, 0, DateTimeKind.Utc);
-            var dayPaymentsRev = paymentsThisMonth.Where(p => p.PaymentDate.Date == date.Date).Sum(p => p.Amount);
-            var dayAptRev = monthApts.Where(a => a.AppointmentDate.Date == date.Date).Sum(a => a.TotalFees);
-            var dayExp = expensesThisMonth.Where(e => e.PaymentDate.Date == date.Date).Sum(e => e.Amount);
+            var dayStart = new DateTime(currentMonthStart.Year, currentMonthStart.Month, day, 0, 0, 0, DateTimeKind.Utc);
+            var dayEnd = dayStart.AddDays(1);
+
+            var dayPaymentsRev = periodPayments.Where(p => p.PaymentDate >= dayStart && p.PaymentDate < dayEnd).Sum(p => p.Amount);
+            var dayAptRev = periodApts.Where(a => a.AppointmentDate >= dayStart && a.AppointmentDate < dayEnd).Sum(GetAppointmentCollectedAmount);
+            var dayExp = periodExpensesList.Where(e => e.PaymentDate >= dayStart && e.PaymentDate < dayEnd).Sum(e => e.Amount);
 
             dailyPoints.Add(new DailyFinancialPointDto
             {
-                Date = date,
-                FormattedDate = $"{day}/{now.Month}",
+                Date = dayStart,
+                FormattedDate = $"{day}/{currentMonthStart.Month}",
                 Revenue = dayPaymentsRev + dayAptRev,
                 Expenses = dayExp
             });
@@ -312,12 +312,12 @@ public class FinancialReportService : IFinancialReportService
         // تفصيل المصروفات حسب التصنيف ومقارنتها بالميزانية
         var categories = await _dbContext.ExpenseCategories.Where(c => c.IsActive).ToListAsync();
         var budgets = await _dbContext.MonthlyBudgets
-            .Where(b => b.Year == now.Year && b.Month == now.Month && (!filter.BranchId.HasValue || b.BranchId == filter.BranchId.Value))
+            .Where(b => b.Year == localToday.Year && b.Month == localToday.Month && (!filter.BranchId.HasValue || b.BranchId == filter.BranchId.Value))
             .ToListAsync();
 
         var categoryBreakdown = categories.Select(c =>
         {
-            var spent = expensesThisMonth.Where(e => e.CategoryId == c.Id).Sum(e => e.Amount);
+            var spent = periodExpensesList.Where(e => e.CategoryId == c.Id).Sum(e => e.Amount);
             var budget = budgets.FirstOrDefault(b => b.CategoryId == c.Id)?.BudgetAmount ?? 0m;
             return new CategoryExpenseBreakdownDto
             {

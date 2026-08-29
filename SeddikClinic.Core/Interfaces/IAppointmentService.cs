@@ -13,7 +13,7 @@ public interface IAppointmentService
     Task<bool> DeleteAppointmentAsync(Guid appointmentId);
     Task<bool> UpdateAppointmentServiceAsync(Guid appointmentId, string serviceType, decimal? newFees);
     Task<bool> RescheduleAppointmentAsync(Guid appointmentId, DateTime newDate, string newStartTime, int durationMinutes = 30);
-    Task<bool> UpdateAppointmentFinancialsAsync(Guid appointmentId, decimal? totalFees, decimal? depositAmount, bool? isDepositPaid);
+    Task<bool> UpdateAppointmentFinancialsAsync(Guid appointmentId, decimal? totalFees, decimal? depositAmount, bool? isDepositPaid, decimal? discountAmount = null);
     Task<bool> RecordInstallmentPaymentAsync(Guid appointmentId, decimal paymentAmount);
 }
 

@@ -114,7 +114,7 @@ public class AppointmentsController : ControllerBase
     [HttpPut("{id}/financials")]
     public async Task<IActionResult> UpdateFinancials(Guid id, [FromBody] UpdateAppointmentFinancialsDto dto)
     {
-        var success = await _appointmentService.UpdateAppointmentFinancialsAsync(id, dto.TotalFees, dto.DepositAmount, dto.IsDepositPaid);
+        var success = await _appointmentService.UpdateAppointmentFinancialsAsync(id, dto.TotalFees, dto.DepositAmount, dto.IsDepositPaid, dto.DiscountAmount);
         if (!success) return NotFound("الموعد غير موجود.");
         return Ok(new { success = true, message = "تم تحديث البيانات المالية بنجاح." });
     }
@@ -135,6 +135,7 @@ public class AppointmentsController : ControllerBase
 public class UpdateAppointmentFinancialsDto
 {
     public decimal? TotalFees { get; set; }
+    public decimal? DiscountAmount { get; set; }
     public decimal? DepositAmount { get; set; }
     public bool? IsDepositPaid { get; set; }
 }

@@ -19,6 +19,8 @@ public class AppUser
     public bool CanManagePatients { get; set; } = true;       // فتح وتعديل ملفات المرضى
     public bool CanExportReports { get; set; } = false;       // تصدير ملفات Excel والتقارير
     public bool CanManageUsers { get; set; } = false;         // إدارة المستخدمين والصلاحيات (خاص بالمدير)
+    public bool CanUseQuickActions { get; set; } = true;      // استخدام قائمة الكليك يمين والإجراءات المتقدمة
+    public bool CanEditPrescriptions { get; set; } = true;    // كتابة وتعديل الروشتات (للمساعد: عرض وطباعة فقط)
 
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }

@@ -25,10 +25,17 @@ public class SeddikClinicDbContext : DbContext
     public DbSet<FinancialPeriod> FinancialPeriods => Set<FinancialPeriod>();
     public DbSet<FinancialPeriodClosing> FinancialPeriodClosings => Set<FinancialPeriodClosing>();
     public DbSet<FinancialAuditLog> FinancialAuditLogs => Set<FinancialAuditLog>();
+    public DbSet<DailyShift> DailyShifts => Set<DailyShift>();
     
     public DbSet<PatientInvoice> PatientInvoices => Set<PatientInvoice>();
     public DbSet<PatientPayment> PatientPayments => Set<PatientPayment>();
     public DbSet<PatientRefund> PatientRefunds => Set<PatientRefund>();
+
+    public DbSet<DentalToothRecord> DentalToothRecords => Set<DentalToothRecord>();
+    public DbSet<PatientDentalImage> PatientDentalImages => Set<PatientDentalImage>();
+    public DbSet<Prescription> Prescriptions => Set<Prescription>();
+    public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
+    public DbSet<DentalDrugCatalogItem> DentalDrugCatalogItems => Set<DentalDrugCatalogItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,6 +178,21 @@ public class SeddikClinicDbContext : DbContext
                 .WithOne(p => p.ClosingDetails)
                 .HasForeignKey<FinancialPeriodClosing>(e => e.PeriodId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // إعدادات DailyShift (تقفيل شيفت اليوم)
+        modelBuilder.Entity<DailyShift>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ShiftNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.OpenedByUserName).HasMaxLength(150);
+            entity.Property(e => e.ClosedByUserName).HasMaxLength(150);
+            entity.Property(e => e.HandoverToUserName).HasMaxLength(150);
+            entity.Property(e => e.DifferenceReason).HasMaxLength(500);
+            entity.Property(e => e.HandoverNotes).HasMaxLength(1000);
+            entity.HasIndex(e => e.ShiftDate);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.BranchId);
         });
 
         // إعدادات FinancialAuditLog

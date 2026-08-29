@@ -6,6 +6,10 @@ public interface IAuthService
 {
     Task<LoginResponseDto> LoginAsync(LoginRequestDto request);
     string GenerateJwtToken(UserDto user);
+
+    Task<PatientLoginResponseDto> PatientLoginAsync(PatientLoginRequestDto request);
+    Task<PatientLoginResponseDto> RegisterPatientAsync(SeddikClinic.Core.DTOs.Appointments.CreatePatientDto request);
+    Task<(bool Success, string Message)> SetPatientPasswordAsync(SetPatientPasswordDto request);
 }
 
 public interface IUserService

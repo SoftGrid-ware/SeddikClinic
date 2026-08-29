@@ -76,8 +76,11 @@ builder.Services.AddScoped<IFinancialReportService, FinancialReportService>();
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IClinicServiceCatalogService, ClinicServiceCatalogService>();
+builder.Services.AddScoped<IDentalChartService, DentalChartService>();
+builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
+builder.Services.AddScoped<IClinicAnalyticsService, ClinicAnalyticsService>();
+builder.Services.AddScoped<IDailyShiftService, DailyShiftService>();
 
 // 3. خدمة المصروفات الشهرية التلقائية
 builder.Services.AddHostedService<RecurringExpensesWorker>();
@@ -174,9 +177,12 @@ using (var scope = app.Services.CreateScope())
                     ""MedicalHistory"" text,
                     ""Allergies"" text,
                     ""Notes"" text,
+                    ""PasswordHash"" text,
                     ""CreatedAt"" timestamp with time zone NOT NULL,
                     ""IsDeleted"" boolean NOT NULL DEFAULT false
                 );
+
+                ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""PasswordHash"" text;
 
                 CREATE TABLE IF NOT EXISTS ""Appointments"" (
                     ""Id"" uuid NOT NULL PRIMARY KEY,
@@ -249,7 +255,142 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanExportReports"" boolean NOT NULL DEFAULT false;
                 ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""CanManageUsers"" boolean NOT NULL DEFAULT false;
                 ALTER TABLE ""AppUsers"" ADD COLUMN IF NOT EXISTS ""PhoneNumber"" varchar(30);
+
+                CREATE TABLE IF NOT EXISTS ""DentalToothRecords"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""PatientId"" uuid NOT NULL REFERENCES ""Patients""(""Id"") ON DELETE CASCADE,
+                    ""ToothNumber"" int NOT NULL,
+                    ""Condition"" int NOT NULL DEFAULT 1,
+                    ""AffectedSurfaces"" varchar(100),
+                    ""Notes"" text,
+                    ""EstimatedCost"" numeric(18,2) NOT NULL DEFAULT 0,
+                    ""IsCompleted"" boolean NOT NULL DEFAULT false,
+                    ""UpdatedAt"" timestamp with time zone NOT NULL,
+                    ""CreatedAt"" timestamp with time zone NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS ""PatientDentalImages"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""PatientId"" uuid NOT NULL REFERENCES ""Patients""(""Id"") ON DELETE CASCADE,
+                    ""Title"" varchar(200) NOT NULL,
+                    ""ImageType"" int NOT NULL DEFAULT 7,
+                    ""ImageUrl"" text NOT NULL,
+                    ""ThumbnailUrl"" text,
+                    ""Notes"" text,
+                    ""AssociatedToothNumber"" int,
+                    ""TakenAt"" timestamp with time zone NOT NULL,
+                    ""CreatedAt"" timestamp with time zone NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS ""Prescriptions"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""PrescriptionNumber"" varchar(50) NOT NULL,
+                    ""PatientId"" uuid NOT NULL REFERENCES ""Patients""(""Id"") ON DELETE CASCADE,
+                    ""AppointmentId"" uuid REFERENCES ""Appointments""(""Id"") ON DELETE SET NULL,
+                    ""DoctorName"" varchar(150) NOT NULL,
+                    ""Diagnosis"" text,
+                    ""GeneralInstructions"" text,
+                    ""IssuedAt"" timestamp with time zone NOT NULL,
+                    ""CreatedAt"" timestamp with time zone NOT NULL,
+                    ""IsDeleted"" boolean NOT NULL DEFAULT false
+                );
+
+                CREATE TABLE IF NOT EXISTS ""PrescriptionItems"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""PrescriptionId"" uuid NOT NULL REFERENCES ""Prescriptions""(""Id"") ON DELETE CASCADE,
+                    ""MedicationName"" varchar(200) NOT NULL,
+                    ""Dosage"" varchar(100),
+                    ""Frequency"" varchar(150),
+                    ""Duration"" varchar(100),
+                    ""Instructions"" text,
+                    ""DisplayOrder"" int NOT NULL DEFAULT 1
+                );
+
+                CREATE TABLE IF NOT EXISTS ""DentalDrugCatalogItems"" (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TradeName"" varchar(200) NOT NULL,
+                    ""ScientificName"" varchar(200),
+                    ""Category"" varchar(100),
+                    ""DefaultDosage"" varchar(100),
+                    ""DefaultFrequency"" varchar(150),
+                    ""DefaultDuration"" varchar(100),
+                    ""DefaultInstructions"" text,
+                    ""IsCommon"" boolean NOT NULL DEFAULT true
+                );
             ");
+        }
+        else
+        {
+            // SQLite Migration Fallback
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS DentalToothRecords (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    PatientId TEXT NOT NULL,
+                    ToothNumber INTEGER NOT NULL,
+                    Condition INTEGER NOT NULL DEFAULT 1,
+                    AffectedSurfaces TEXT,
+                    Notes TEXT,
+                    EstimatedCost NUMERIC NOT NULL DEFAULT 0,
+                    IsCompleted INTEGER NOT NULL DEFAULT 0,
+                    UpdatedAt TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS PatientDentalImages (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    PatientId TEXT NOT NULL,
+                    Title TEXT NOT NULL,
+                    ImageType INTEGER NOT NULL DEFAULT 7,
+                    ImageUrl TEXT NOT NULL,
+                    ThumbnailUrl TEXT,
+                    Notes TEXT,
+                    AssociatedToothNumber INTEGER,
+                    TakenAt TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS Prescriptions (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    PrescriptionNumber TEXT NOT NULL,
+                    PatientId TEXT NOT NULL,
+                    AppointmentId TEXT,
+                    DoctorName TEXT NOT NULL,
+                    Diagnosis TEXT,
+                    GeneralInstructions TEXT,
+                    IssuedAt TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL,
+                    IsDeleted INTEGER NOT NULL DEFAULT 0
+                );
+
+                CREATE TABLE IF NOT EXISTS PrescriptionItems (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    PrescriptionId TEXT NOT NULL,
+                    MedicationName TEXT NOT NULL,
+                    Dosage TEXT,
+                    Frequency TEXT,
+                    Duration TEXT,
+                    Instructions TEXT,
+                    DisplayOrder INTEGER NOT NULL DEFAULT 1
+                );
+
+                CREATE TABLE IF NOT EXISTS DentalDrugCatalogItems (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    TradeName TEXT NOT NULL,
+                    ScientificName TEXT,
+                    Category TEXT,
+                    DefaultDosage TEXT,
+                    DefaultFrequency TEXT,
+                    DefaultDuration TEXT,
+                    DefaultInstructions TEXT,
+                    IsCommon INTEGER NOT NULL DEFAULT 1
+                );
+            ");
+
+            try
+            {
+                db.Database.ExecuteSqlRaw("ALTER TABLE Patients ADD COLUMN PasswordHash TEXT;");
+            }
+            catch { }
         }
 
         // بذر خدمات العيادة والأسعار الافتراضية

@@ -16,6 +16,7 @@ public class PatientDto
     public string? MedicalHistory { get; set; }
     public string? Allergies { get; set; }
     public string? Notes { get; set; }
+    public bool HasPassword { get; set; }
     public int TotalVisits { get; set; }
     public DateTime? LastVisitDate { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -40,6 +41,7 @@ public class CreatePatientDto
 {
     public string FullName { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
+    public string? Password { get; set; }
     public string? AlternativePhone { get; set; }
     public string? NationalId { get; set; }
     public string? Gender { get; set; } = "ذكر";

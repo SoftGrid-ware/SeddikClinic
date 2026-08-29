@@ -58,6 +58,8 @@ public class UserService : IUserService
             CanManagePatients = isManager || dto.CanManagePatients,
             CanExportReports = isManager || dto.CanExportReports,
             CanManageUsers = isManager || dto.CanManageUsers,
+            CanUseQuickActions = isManager || dto.CanUseQuickActions,
+            CanEditPrescriptions = isManager || dto.CanEditPrescriptions,
             IsActive = true
         };
 
@@ -79,6 +81,8 @@ public class UserService : IUserService
         user.CanManagePatients = dto.CanManagePatients;
         user.CanExportReports = dto.CanExportReports;
         user.CanManageUsers = dto.CanManageUsers;
+        user.CanUseQuickActions = dto.CanUseQuickActions;
+        user.CanEditPrescriptions = dto.CanEditPrescriptions;
 
         await _dbContext.SaveChangesAsync();
         return true;
@@ -130,6 +134,8 @@ public class UserService : IUserService
             CanManagePatients = u.CanManagePatients,
             CanExportReports = u.CanExportReports,
             CanManageUsers = u.CanManageUsers,
+            CanUseQuickActions = u.CanUseQuickActions,
+            CanEditPrescriptions = u.CanEditPrescriptions,
             IsActive = u.IsActive,
             LastLoginAt = u.LastLoginAt,
             CreatedAt = u.CreatedAt

@@ -50,6 +50,32 @@ public class PatientService : IPatientService
 
     public async Task<PatientDto> CreatePatientAsync(CreatePatientDto dto)
     {
+        var cleanPhone = dto.PhoneNumber?.Trim() ?? "";
+        if (!string.IsNullOrWhiteSpace(cleanPhone))
+        {
+            var existing = await _dbContext.Patients
+                .Include(p => p.Appointments)
+                .FirstOrDefaultAsync(p => !p.IsDeleted && p.PhoneNumber == cleanPhone);
+
+            if (existing != null)
+            {
+                if (!string.IsNullOrWhiteSpace(dto.FullName) && (existing.FullName == "مريض غير مسجل" || string.IsNullOrWhiteSpace(existing.FullName)))
+                {
+                    existing.FullName = dto.FullName.Trim();
+                }
+                if (!string.IsNullOrWhiteSpace(dto.MedicalHistory) && string.IsNullOrWhiteSpace(existing.MedicalHistory))
+                {
+                    existing.MedicalHistory = dto.MedicalHistory;
+                }
+                if (!string.IsNullOrWhiteSpace(dto.Allergies) && string.IsNullOrWhiteSpace(existing.Allergies))
+                {
+                    existing.Allergies = dto.Allergies;
+                }
+                await _dbContext.SaveChangesAsync();
+                return MapToDto(existing);
+            }
+        }
+
         var count = await _dbContext.Patients.CountAsync();
         var patientCode = $"P-{(count + 1001)}";
 
@@ -57,7 +83,7 @@ public class PatientService : IPatientService
         {
             PatientCode = patientCode,
             FullName = dto.FullName.Trim(),
-            PhoneNumber = dto.PhoneNumber.Trim(),
+            PhoneNumber = cleanPhone,
             AlternativePhone = dto.AlternativePhone?.Trim(),
             NationalId = dto.NationalId?.Trim(),
             Gender = dto.Gender ?? "ذكر",
@@ -67,7 +93,8 @@ public class PatientService : IPatientService
             BloodGroup = dto.BloodGroup,
             MedicalHistory = dto.MedicalHistory,
             Allergies = dto.Allergies,
-            Notes = dto.Notes
+            Notes = dto.Notes,
+            PasswordHash = !string.IsNullOrWhiteSpace(dto.Password) ? PasswordHasher.HashPassword(dto.Password.Trim()) : null
         };
 
         _dbContext.Patients.Add(patient);
@@ -119,7 +146,7 @@ public class PatientService : IPatientService
         return true;
     }
 
-    private static PatientDto MapToDto(Patient p)
+    public static PatientDto MapToDto(Patient p)
     {
         var activeAppointments = p.Appointments?
             .Where(a => !a.IsDeleted)
@@ -163,6 +190,7 @@ public class PatientService : IPatientService
             MedicalHistory = p.MedicalHistory,
             Allergies = p.Allergies,
             Notes = p.Notes,
+            HasPassword = !string.IsNullOrEmpty(p.PasswordHash),
             TotalVisits = activeAppointments.Count,
             LastVisitDate = lastVisit,
             CreatedAt = p.CreatedAt,

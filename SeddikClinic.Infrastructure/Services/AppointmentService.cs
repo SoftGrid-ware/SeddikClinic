@@ -38,17 +38,20 @@ public class AppointmentService : IAppointmentService
 
     public async Task<AppointmentSummaryDto> GetTodayAppointmentsSummaryAsync(Guid? doctorId = null, Guid? branchId = null)
     {
-        var today = DateTime.UtcNow.Date;
+        var todayStart = DateTime.UtcNow.Date;
+        var todayEnd = todayStart.AddDays(1);
+
         var query = _dbContext.Appointments
             .Include(a => a.Patient)
-            .Where(a => a.AppointmentDate.Date == today);
+            .Where(a => !a.IsDeleted && a.AppointmentDate >= todayStart && a.AppointmentDate < todayEnd);
 
         if (doctorId.HasValue) query = query.Where(a => a.DoctorId == doctorId.Value);
         if (branchId.HasValue) query = query.Where(a => a.BranchId == branchId.Value);
 
-        var appointments = await query.OrderBy(a => a.StartTime).ToListAsync();
+        var appointments = await query.ToListAsync();
+        var orderedAppointments = appointments.OrderBy(a => a.StartTime).ToList();
 
-        var dtos = appointments.Select(MapToDto).ToList();
+        var dtos = orderedAppointments.Select(MapToDto).ToList();
 
         return new AppointmentSummaryDto
         {
@@ -65,18 +68,20 @@ public class AppointmentService : IAppointmentService
     {
         var query = _dbContext.Appointments
             .Include(a => a.Patient)
+            .Where(a => !a.IsDeleted)
             .AsQueryable();
 
         if (startDate.HasValue && endDate.HasValue)
         {
             var s = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc);
-            var e = DateTime.SpecifyKind(endDate.Value.Date, DateTimeKind.Utc);
-            query = query.Where(a => a.AppointmentDate.Date >= s && a.AppointmentDate.Date <= e);
+            var e = DateTime.SpecifyKind(endDate.Value.Date, DateTimeKind.Utc).AddDays(1);
+            query = query.Where(a => a.AppointmentDate >= s && a.AppointmentDate < e);
         }
         else if (date.HasValue)
         {
             var d = DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc);
-            query = query.Where(a => a.AppointmentDate.Date == d);
+            var nextD = d.AddDays(1);
+            query = query.Where(a => a.AppointmentDate >= d && a.AppointmentDate < nextD);
         }
 
         if (doctorId.HasValue) query = query.Where(a => a.DoctorId == doctorId.Value);
@@ -90,8 +95,9 @@ public class AppointmentService : IAppointmentService
                                      a.AppointmentNumber.ToLower().Contains(term));
         }
 
-        var list = await query.OrderByDescending(a => a.AppointmentDate).ThenBy(a => a.StartTime).ToListAsync();
-        return list.Select(MapToDto).ToList();
+        var list = await query.OrderByDescending(a => a.AppointmentDate).ToListAsync();
+        var orderedList = list.OrderByDescending(a => a.AppointmentDate.Date).ThenBy(a => a.StartTime).ToList();
+        return orderedList.Select(MapToDto).ToList();
     }
 
     public async Task<AppointmentDto> CreateAppointmentAsync(CreateAppointmentDto dto, string createdByUserName)
@@ -105,19 +111,38 @@ public class AppointmentService : IAppointmentService
         }
         else
         {
-            // إنشاء مريض جديد فوراً
-            var newPatient = await _patientService.CreatePatientAsync(new CreatePatientDto
+            // البحث عن مريض مسجل مسبقاً بنفس رقم الهاتف لتفادي التكرار
+            var cleanPhone = dto.NewPatientPhone?.Trim();
+            var existingPatient = !string.IsNullOrWhiteSpace(cleanPhone)
+                ? await _dbContext.Patients.FirstOrDefaultAsync(p => !p.IsDeleted && p.PhoneNumber == cleanPhone)
+                : null;
+
+            if (existingPatient != null)
             {
-                FullName = dto.NewPatientFullName ?? "مريض غير مسجل",
-                PhoneNumber = dto.NewPatientPhone ?? "01000000000"
-            });
-            patientId = newPatient.Id;
+                patientId = existingPatient.Id;
+                if (!string.IsNullOrWhiteSpace(dto.NewPatientFullName) && (existingPatient.FullName == "مريض غير مسجل" || string.IsNullOrWhiteSpace(existingPatient.FullName)))
+                {
+                    existingPatient.FullName = dto.NewPatientFullName.Trim();
+                    await _dbContext.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                // إنشاء مريض جديد فوراً
+                var newPatient = await _patientService.CreatePatientAsync(new CreatePatientDto
+                {
+                    FullName = dto.NewPatientFullName ?? "مريض غير مسجل",
+                    PhoneNumber = dto.NewPatientPhone ?? "01000000000"
+                });
+                patientId = newPatient.Id;
+            }
         }
 
         var startTime = ParseTimeSlot(dto.StartTimeString, dto.StartTime != TimeSpan.Zero ? dto.StartTime : new TimeSpan(17, 0, 0));
         var endTime = startTime.Add(TimeSpan.FromMinutes(dto.DurationMinutes > 0 ? dto.DurationMinutes : 30));
         var aptDate = DateTime.SpecifyKind(dto.AppointmentDate.Date, DateTimeKind.Utc);
-        var count = await _dbContext.Appointments.CountAsync(a => a.AppointmentDate.Date == aptDate);
+        var nextAptDate = aptDate.AddDays(1);
+        var count = await _dbContext.Appointments.CountAsync(a => a.AppointmentDate >= aptDate && a.AppointmentDate < nextAptDate);
         var aptNumber = $"APT-{aptDate:yyyyMMdd}-{(count + 1):D3}";
 
         var appointment = new Appointment
@@ -133,6 +158,7 @@ public class AppointmentService : IAppointmentService
             ReasonForVisit = !string.IsNullOrWhiteSpace(dto.ReasonForVisit) ? dto.ReasonForVisit : dto.Notes,
             Status = AppointmentStatus.Scheduled,
             TotalFees = dto.TotalFees,
+            DiscountAmount = dto.DiscountAmount,
             DepositAmount = dto.DepositAmount,
             IsDepositPaid = dto.DepositAmount > 0,
             Notes = !string.IsNullOrWhiteSpace(dto.Notes) ? dto.Notes : dto.ReasonForVisit,
@@ -158,12 +184,7 @@ public class AppointmentService : IAppointmentService
 
         await _dbContext.SaveChangesAsync();
 
-        // إعادة جلب الحجز مع المريض
-        var created = await _dbContext.Appointments
-            .Include(a => a.Patient)
-            .FirstAsync(a => a.Id == appointment.Id);
-
-        return MapToDto(created);
+        return MapToDto(appointment);
     }
 
     public async Task<bool> UpdateAppointmentStatusAsync(Guid appointmentId, AppointmentStatus newStatus, string? cancellationReason = null)
@@ -202,7 +223,7 @@ public class AppointmentService : IAppointmentService
         if (apt == null) return false;
 
         apt.ServiceType = serviceType;
-        if (newFees.HasValue && newFees.Value > 0)
+        if (newFees.HasValue)
         {
             apt.TotalFees = newFees.Value;
         }
@@ -217,26 +238,22 @@ public class AppointmentService : IAppointmentService
         if (apt == null) return false;
 
         apt.AppointmentDate = DateTime.SpecifyKind(newDate.Date, DateTimeKind.Utc);
-        
-        var parsedStart = ParseTimeSlot(newStartTime, apt.StartTime);
-        apt.StartTime = parsedStart;
-        apt.EndTime = parsedStart.Add(TimeSpan.FromMinutes(durationMinutes > 0 ? durationMinutes : 30));
+        var parsedTime = ParseTimeSlot(newStartTime, apt.StartTime);
+        apt.StartTime = parsedTime;
+        apt.EndTime = parsedTime.Add(TimeSpan.FromMinutes(durationMinutes > 0 ? durationMinutes : 30));
 
         await _dbContext.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> UpdateAppointmentFinancialsAsync(Guid appointmentId, decimal? totalFees, decimal? depositAmount, bool? isDepositPaid)
+    public async Task<bool> UpdateAppointmentFinancialsAsync(Guid appointmentId, decimal? totalFees, decimal? depositAmount, bool? isDepositPaid, decimal? discountAmount = null)
     {
         var apt = await _dbContext.Appointments.FindAsync(appointmentId);
         if (apt == null) return false;
 
         if (totalFees.HasValue) apt.TotalFees = totalFees.Value;
-        if (depositAmount.HasValue)
-        {
-            apt.DepositAmount = depositAmount.Value;
-            apt.IsDepositPaid = depositAmount.Value > 0;
-        }
+        if (discountAmount.HasValue) apt.DiscountAmount = discountAmount.Value;
+        if (depositAmount.HasValue) apt.DepositAmount = depositAmount.Value;
         if (isDepositPaid.HasValue) apt.IsDepositPaid = isDepositPaid.Value;
 
         await _dbContext.SaveChangesAsync();
@@ -250,9 +267,10 @@ public class AppointmentService : IAppointmentService
 
         apt.DepositAmount += paymentAmount;
         apt.IsDepositPaid = true;
-        if (apt.DepositAmount > apt.TotalFees)
+        var netFees = Math.Max(0, apt.TotalFees - apt.DiscountAmount);
+        if (apt.DepositAmount > netFees)
         {
-            apt.DepositAmount = apt.TotalFees;
+            apt.DepositAmount = netFees;
         }
 
         await _dbContext.SaveChangesAsync();
@@ -279,6 +297,7 @@ public class AppointmentService : IAppointmentService
             ServiceType = a.ServiceType,
             Status = a.Status,
             TotalFees = a.TotalFees,
+            DiscountAmount = a.DiscountAmount,
             DepositAmount = a.DepositAmount,
             IsDepositPaid = a.IsDepositPaid,
             Notes = a.Notes,

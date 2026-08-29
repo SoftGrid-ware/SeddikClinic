@@ -37,5 +37,27 @@ public enum FinancialAuditAction
     Cancel = 3,
     StatusChange = 4,
     PeriodClose = 5,
-    PeriodReopen = 6
+    PeriodReopen = 6,
+    ShiftOpen = 7,
+    ShiftClose = 8
+}
+
+public enum DailyShiftStatus
+{
+    Open = 1,   // وردية مفتوحة جارية
+    Closed = 2  // وردية مقفلة ومطابقة
+}
+
+public enum DailyShiftType
+{
+    Morning = 1,  // وردية صباحية
+    Evening = 2,  // وردية مسائية
+    FullDay = 3   // وردية يوم كامل
+}
+
+public enum ShiftDifferenceStatus
+{
+    Balanced = 1, // متطابق تماماً
+    Surplus = 2,  // زيادة في الصندوق
+    Shortage = 3  // عجز في الصندوق
 }

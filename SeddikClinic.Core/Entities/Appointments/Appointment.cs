@@ -30,6 +30,7 @@ public class Appointment
 
     // الأمور المالية المرتبطة بالحجز
     public decimal TotalFees { get; set; } = 0m;
+    public decimal DiscountAmount { get; set; } = 0m; // الخصم المالي الممنوح للمريض
     public decimal DepositAmount { get; set; } = 0m; // العربون المدفوع
     public bool IsDepositPaid { get; set; } = false;
 

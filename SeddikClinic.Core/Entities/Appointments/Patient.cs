@@ -18,6 +18,7 @@ public class Patient
     public string? MedicalHistory { get; set; } // أمراض مزمنة، ضغط، سكري
     public string? Allergies { get; set; } // حساسية البنسلين، البنج، إلخ
     public string? Notes { get; set; }
+    public string? PasswordHash { get; set; } // كلمة مرور المريض المشفرة
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; } = false;
 

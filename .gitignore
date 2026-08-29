@@ -1,0 +1,26 @@
+﻿## Build and output directories
+bin/
+obj/
+publish/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Packages & Artifacts
+*.nupkg
+packages/
+Android_APKs/
+SeddikClinic_WindowsApp/
+
+## Executables & Databases
+*.db
+*.db-shm
+*.db-wal
+cloudflared.exe
+
+## Logs
+*.log
+.system_generated/

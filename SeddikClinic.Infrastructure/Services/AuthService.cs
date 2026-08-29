@@ -110,4 +110,189 @@ public class AuthService : IAuthService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public async Task<PatientLoginResponseDto> PatientLoginAsync(PatientLoginRequestDto request)
+    {
+        var rawPhone = request.PhoneNumber?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(rawPhone))
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "يرجى إدخال رقم الهاتف."
+            };
+        }
+
+        var patient = await _dbContext.Patients
+            .Include(p => p.Appointments)
+            .FirstOrDefaultAsync(p => !p.IsDeleted && (p.PhoneNumber == rawPhone || p.AlternativePhone == rawPhone));
+
+        if (patient == null)
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "رقم الهاتف غير مسجل لدينا. يرجى إنشاء حساب جديد أو مراجعة الاستقبال."
+            };
+        }
+
+        // إذا كان المريض مسجلاً من قبل العيادة ولم يقم بتعيين كلمة مرور بعد
+        if (string.IsNullOrEmpty(patient.PasswordHash))
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = true,
+                RequiresPasswordSetup = true,
+                Message = "أهلاً بك! يرجى تعيين كلمة مرور لحماية حسابك.",
+                Patient = PatientService.MapToDto(patient),
+                Token = GeneratePatientJwtToken(patient)
+            };
+        }
+
+        // التحقق من كلمة المرور
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "يرجى إدخال كلمة المرور لحسابك."
+            };
+        }
+
+        if (!PasswordHasher.VerifyPassword(request.Password, patient.PasswordHash))
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى."
+            };
+        }
+
+        return new PatientLoginResponseDto
+        {
+            Success = true,
+            RequiresPasswordSetup = false,
+            Message = "تم تسجيل الدخول بنجاح.",
+            Patient = PatientService.MapToDto(patient),
+            Token = GeneratePatientJwtToken(patient)
+        };
+    }
+
+    public async Task<PatientLoginResponseDto> RegisterPatientAsync(SeddikClinic.Core.DTOs.Appointments.CreatePatientDto request)
+    {
+        var rawPhone = request.PhoneNumber?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(rawPhone) || string.IsNullOrWhiteSpace(request.FullName))
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "يرجى إدخال الاسم بالكامل ورقم الهاتف."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 4)
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "يجب أن تكون كلمة المرور 4 أحرف أو أرقام على الأقل."
+            };
+        }
+
+        var exists = await _dbContext.Patients.AnyAsync(p => !p.IsDeleted && (p.PhoneNumber == rawPhone || p.AlternativePhone == rawPhone));
+        if (exists)
+        {
+            return new PatientLoginResponseDto
+            {
+                Success = false,
+                Message = "رقم الهاتف مسجل بالفعل في النظام. يرجى تسجيل الدخول بدلاً من التسجيل الجديد."
+            };
+        }
+
+        var count = await _dbContext.Patients.CountAsync();
+        var patientCode = $"P-{(count + 1001)}";
+
+        var newPatient = new SeddikClinic.Core.Entities.Appointments.Patient
+        {
+            PatientCode = patientCode,
+            FullName = request.FullName.Trim(),
+            PhoneNumber = rawPhone,
+            PasswordHash = PasswordHasher.HashPassword(request.Password.Trim()),
+            AlternativePhone = request.AlternativePhone?.Trim(),
+            NationalId = request.NationalId?.Trim(),
+            Gender = request.Gender ?? "ذكر",
+            BirthDate = request.BirthDate,
+            Age = request.Age,
+            Address = request.Address,
+            BloodGroup = request.BloodGroup,
+            MedicalHistory = request.MedicalHistory,
+            Allergies = request.Allergies,
+            Notes = request.Notes
+        };
+
+        _dbContext.Patients.Add(newPatient);
+        await _dbContext.SaveChangesAsync();
+
+        return new PatientLoginResponseDto
+        {
+            Success = true,
+            RequiresPasswordSetup = false,
+            Message = "تم إنشاء الحساب بنجاح.",
+            Patient = PatientService.MapToDto(newPatient),
+            Token = GeneratePatientJwtToken(newPatient)
+        };
+    }
+
+    public async Task<(bool Success, string Message)> SetPatientPasswordAsync(SetPatientPasswordDto request)
+    {
+        var patient = await _dbContext.Patients.FindAsync(request.PatientId);
+        if (patient == null || patient.IsDeleted)
+        {
+            return (false, "حساب المريض غير موجود.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 4)
+        {
+            return (false, "يجب أن تكون كلمة المرور الجديدة 4 أحرف أو أرقام على الأقل.");
+        }
+
+        // إذا كان لديه كلمة مرور حالية سابقة، نتحقق منها أولاً
+        if (!string.IsNullOrEmpty(patient.PasswordHash) && !string.IsNullOrWhiteSpace(request.CurrentPassword))
+        {
+            if (!PasswordHasher.VerifyPassword(request.CurrentPassword, patient.PasswordHash))
+            {
+                return (false, "كلمة المرور الحالية غير صحيحة.");
+            }
+        }
+
+        patient.PasswordHash = PasswordHasher.HashPassword(request.NewPassword.Trim());
+        await _dbContext.SaveChangesAsync();
+
+        return (true, "تم تعيين كلمة المرور وحفظها بنجاح.");
+    }
+
+    private string GeneratePatientJwtToken(SeddikClinic.Core.Entities.Appointments.Patient patient)
+    {
+        var secret = _configuration["JwtSettings:Secret"] ?? "A_VERY_LONG_SECRET_KEY_FOR_JWT_AUTHENTICATION_SEDDIC_CLINIC_2026_PRODUCTION";
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, patient.Id.ToString()),
+            new(ClaimTypes.Name, patient.FullName),
+            new(ClaimTypes.MobilePhone, patient.PhoneNumber),
+            new(ClaimTypes.Role, "Patient")
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: null,
+            audience: null,
+            claims: claims,
+            expires: DateTime.UtcNow.AddDays(90),
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }

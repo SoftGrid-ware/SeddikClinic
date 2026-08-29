@@ -1,0 +1,11 @@
+**/.git
+**/.github
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/TestResults
+**/*.log
+.gemini
+Dockerfile
+.dockerignore

@@ -46,6 +46,8 @@ public class UserDto
     public bool CanManagePatients { get; set; }
     public bool CanExportReports { get; set; }
     public bool CanManageUsers { get; set; }
+    public bool CanUseQuickActions { get; set; } = true;
+    public bool CanEditPrescriptions { get; set; } = true;
 
     public bool IsActive { get; set; }
     public DateTime? LastLoginAt { get; set; }
@@ -68,6 +70,8 @@ public class CreateUserDto
     public bool CanManagePatients { get; set; } = true;
     public bool CanExportReports { get; set; } = false;
     public bool CanManageUsers { get; set; } = false;
+    public bool CanUseQuickActions { get; set; } = true;
+    public bool CanEditPrescriptions { get; set; } = true;
 }
 
 public class UpdateUserPermissionsDto
@@ -79,10 +83,34 @@ public class UpdateUserPermissionsDto
     public bool CanManagePatients { get; set; }
     public bool CanExportReports { get; set; }
     public bool CanManageUsers { get; set; }
+    public bool CanUseQuickActions { get; set; }
+    public bool CanEditPrescriptions { get; set; }
 }
 
 public class ChangePasswordDto
 {
     public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class PatientLoginRequestDto
+{
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string? Password { get; set; }
+}
+
+public class PatientLoginResponseDto
+{
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public string? Token { get; set; }
+    public SeddikClinic.Core.DTOs.Appointments.PatientDto? Patient { get; set; }
+    public bool RequiresPasswordSetup { get; set; }
+}
+
+public class SetPatientPasswordDto
+{
+    public Guid PatientId { get; set; }
+    public string? CurrentPassword { get; set; }
     public string NewPassword { get; set; } = string.Empty;
 }
