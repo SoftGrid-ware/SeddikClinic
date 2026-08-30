@@ -386,11 +386,60 @@ using (var scope = app.Services.CreateScope())
                 );
             ");
 
-            try
+            // SQLite Migration Fallback for all newly added columns
+            var sqliteAlterCommands = new[]
             {
-                db.Database.ExecuteSqlRaw("ALTER TABLE Patients ADD COLUMN PasswordHash TEXT;");
+                "ALTER TABLE AppUsers ADD COLUMN CanViewFinancials INTEGER NOT NULL DEFAULT 0;",
+                "ALTER TABLE AppUsers ADD COLUMN CanManageExpenses INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE AppUsers ADD COLUMN CanCancelExpenses INTEGER NOT NULL DEFAULT 0;",
+                "ALTER TABLE AppUsers ADD COLUMN CanManageAppointments INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE AppUsers ADD COLUMN CanManagePatients INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE AppUsers ADD COLUMN CanExportReports INTEGER NOT NULL DEFAULT 0;",
+                "ALTER TABLE AppUsers ADD COLUMN CanManageUsers INTEGER NOT NULL DEFAULT 0;",
+                "ALTER TABLE AppUsers ADD COLUMN CanUseQuickActions INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE AppUsers ADD COLUMN CanEditPrescriptions INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE AppUsers ADD COLUMN PhoneNumber TEXT;",
+
+                "ALTER TABLE Appointments ADD COLUMN CancellationReason TEXT;",
+                "ALTER TABLE Appointments ADD COLUMN TotalFees NUMERIC NOT NULL DEFAULT 0;",
+                "ALTER TABLE Appointments ADD COLUMN DiscountAmount NUMERIC NOT NULL DEFAULT 0;",
+                "ALTER TABLE Appointments ADD COLUMN DepositAmount NUMERIC NOT NULL DEFAULT 0;",
+                "ALTER TABLE Appointments ADD COLUMN IsDepositPaid INTEGER NOT NULL DEFAULT 0;",
+                "ALTER TABLE Appointments ADD COLUMN DoctorId TEXT;",
+                "ALTER TABLE Appointments ADD COLUMN DoctorName TEXT;",
+                "ALTER TABLE Appointments ADD COLUMN BranchId TEXT;",
+                "ALTER TABLE Appointments ADD COLUMN CreatedByUserName TEXT;",
+                "ALTER TABLE Appointments ADD COLUMN Notes TEXT;",
+                "ALTER TABLE Appointments ADD COLUMN ServiceType TEXT;",
+
+                "ALTER TABLE Patients ADD COLUMN PasswordHash TEXT;",
+                "ALTER TABLE Patients ADD COLUMN PatientCode TEXT;",
+                "ALTER TABLE Patients ADD COLUMN AlternativePhone TEXT;",
+                "ALTER TABLE Patients ADD COLUMN NationalId TEXT;",
+                "ALTER TABLE Patients ADD COLUMN Gender TEXT;",
+                "ALTER TABLE Patients ADD COLUMN BirthDate TEXT;",
+                "ALTER TABLE Patients ADD COLUMN Age INTEGER;",
+                "ALTER TABLE Patients ADD COLUMN Address TEXT;",
+                "ALTER TABLE Patients ADD COLUMN BloodGroup TEXT;",
+                "ALTER TABLE Patients ADD COLUMN MedicalHistory TEXT;",
+                "ALTER TABLE Patients ADD COLUMN Allergies TEXT;",
+                "ALTER TABLE Patients ADD COLUMN Notes TEXT;",
+
+                "ALTER TABLE ClinicServices ADD COLUMN Category TEXT;",
+                "ALTER TABLE ClinicServices ADD COLUMN Description TEXT;",
+                "ALTER TABLE ClinicServices ADD COLUMN DefaultPrice NUMERIC NOT NULL DEFAULT 0;",
+                "ALTER TABLE ClinicServices ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE ClinicServices ADD COLUMN DisplayOrder INTEGER NOT NULL DEFAULT 0;"
+            };
+
+            foreach (var sql in sqliteAlterCommands)
+            {
+                try
+                {
+                    db.Database.ExecuteSqlRaw(sql);
+                }
+                catch { }
             }
-            catch { }
         }
 
         // بذر خدمات العيادة والأسعار الافتراضية
@@ -436,7 +485,7 @@ using (var scope = app.Services.CreateScope())
             db.AppUsers.Add(new AppUser
             {
                 Username = "admin",
-                PasswordHash = PasswordHasher.HashPassword("123"),
+                PasswordHash = PasswordHasher.HashPassword("admin123"),
                 FullName = "د. صديق (مدير المنظومة)",
                 PhoneNumber = "01126092725",
                 Role = UserRole.Manager,
