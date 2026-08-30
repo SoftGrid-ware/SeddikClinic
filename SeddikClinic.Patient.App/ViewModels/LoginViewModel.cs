@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SeddikClinic.Core.DTOs.Appointments;
 using SeddikClinic.Mobile.Shared.Helpers;
@@ -15,7 +15,28 @@ public partial class LoginViewModel : ObservableObject
     private string _phoneNumber = string.Empty;
 
     [ObservableProperty]
+    private string _password = string.Empty;
+
+    [ObservableProperty]
+    private bool _isPasswordHidden = true;
+
+    [ObservableProperty]
     private string _fullName = string.Empty;
+
+    [ObservableProperty]
+    private string _confirmPassword = string.Empty;
+
+    [ObservableProperty]
+    private bool _isRegisterMode;
+
+    [ObservableProperty]
+    private bool _isSettingInitialPassword;
+
+    [ObservableProperty]
+    private string _initialPassword = string.Empty;
+
+    [ObservableProperty]
+    private string _confirmInitialPassword = string.Empty;
 
     [ObservableProperty]
     private string _serverUrl = ApiConfig.BaseUrl;
@@ -24,17 +45,44 @@ public partial class LoginViewModel : ObservableObject
     private bool _showServerConfig;
 
     [ObservableProperty]
-    private bool _isNewPatient;
-
-    [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
     private string _errorMessage = string.Empty;
 
+    private PatientDto? _pendingPatient;
+
     public LoginViewModel(MobileApiClient apiClient)
     {
         _apiClient = apiClient;
+        LoadSavedCredentials();
+    }
+
+    private void LoadSavedCredentials()
+    {
+        try
+        {
+            var savedPhone = Preferences.Get("SavedPatientPhone", string.Empty);
+            if (!string.IsNullOrWhiteSpace(savedPhone))
+            {
+                PhoneNumber = savedPhone;
+            }
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void TogglePasswordVisibility()
+    {
+        IsPasswordHidden = !IsPasswordHidden;
+    }
+
+    [RelayCommand]
+    private void SwitchMode()
+    {
+        IsRegisterMode = !IsRegisterMode;
+        ErrorMessage = string.Empty;
+        IsSettingInitialPassword = false;
     }
 
     [RelayCommand]
@@ -60,7 +108,7 @@ public partial class LoginViewModel : ObservableObject
             }
             else
             {
-                ErrorMessage = $"تعذر الاتصال بالسيرفر ({ServerUrl}). تأكد من أن جهاز الكمبيوتر متصل بنفس شبكة الواي فاي والسيرفر قيد التشغيل.";
+                ErrorMessage = $"تعذر الاتصال بالسيرفر ({ServerUrl}). تأكد من أن السيرفر قيد التشغيل.";
             }
         }
         catch (Exception ex)
@@ -78,7 +126,7 @@ public partial class LoginViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(PhoneNumber))
         {
-            ErrorMessage = "يرجى إدخال رقم الهاتف";
+            ErrorMessage = "يرجى إدخال رقم الهاتف.";
             return;
         }
 
@@ -92,58 +140,88 @@ public partial class LoginViewModel : ObservableObject
                 _apiClient.SetBaseUrl(ServerUrl);
             }
 
-            if (!IsNewPatient)
+            if (IsRegisterMode)
             {
-                var patient = await _apiClient.GetPatientByPhoneAsync(PhoneNumber.Trim());
-                if (patient != null)
+                // ==============================
+                // 📝 إنشاء حساب جديد
+                // ==============================
+                if (string.IsNullOrWhiteSpace(FullName))
                 {
-                    SetPatientSession(patient);
-                    await Shell.Current.GoToAsync("//HomePage");
+                    ErrorMessage = "يرجى إدخال الاسم بالكامل.";
                     return;
+                }
+
+                if (string.IsNullOrWhiteSpace(Password) || Password.Length < 4)
+                {
+                    ErrorMessage = "يجب أن تكون كلمة المرور 4 أحرف أو أرقام على الأقل.";
+                    return;
+                }
+
+                if (Password != ConfirmPassword)
+                {
+                    ErrorMessage = "كلمة المرور وتأكيد كلمة المرور غير متطابقين.";
+                    return;
+                }
+
+                var createDto = new CreatePatientDto
+                {
+                    FullName = FullName.Trim(),
+                    PhoneNumber = PhoneNumber.Trim(),
+                    Password = Password.Trim()
+                };
+
+                var res = await _apiClient.PatientRegisterAsync(createDto);
+                if (res.Success && res.Patient != null)
+                {
+                    Preferences.Set("SavedPatientPhone", PhoneNumber.Trim());
+                    SetPatientSession(res.Patient);
+                    await Shell.Current.GoToAsync("//HomePage");
                 }
                 else
                 {
-                    // If no connection, report error
+                    ErrorMessage = res.Message ?? "تعذر إنشاء الحساب.";
+                }
+            }
+            else
+            {
+                // ==============================
+                // 🔑 تسجيل الدخول
+                // ==============================
+                var res = await _apiClient.PatientLoginAsync(PhoneNumber.Trim(), Password);
+                if (res.Success)
+                {
+                    if (res.RequiresPasswordSetup && res.Patient != null)
+                    {
+                        // المريض مسجل مسبقاً بالعيادة وليس لديه كلمة مرور بعد
+                        _pendingPatient = res.Patient;
+                        IsSettingInitialPassword = true;
+                        ErrorMessage = "أهلاً بك! يرجى إنشاء كلمة مرور خاصة بك لحماية حسابك من الآن فصاعداً 🔒";
+                        return;
+                    }
+
+                    if (res.Patient != null)
+                    {
+                        Preferences.Set("SavedPatientPhone", PhoneNumber.Trim());
+                        SetPatientSession(res.Patient);
+                        await Shell.Current.GoToAsync("//HomePage");
+                    }
+                }
+                else
+                {
+                    // فحص إذا كان السيرفر غير متاح
                     if (!string.IsNullOrEmpty(_apiClient.LastErrorMessage))
                     {
                         var isConnected = await _apiClient.CheckConnectionAsync();
                         if (!isConnected)
                         {
-                            ErrorMessage = $"تعذر الاتصال بسيرفر العيادة ({_apiClient.BaseUrl}).\nيرجى التأكد من اتصال الهاتف بالواي فاي والضغط على 'إعدادات السيرفر'.";
+                            ErrorMessage = $"تعذر الاتصال بسيرفر العيادة ({_apiClient.BaseUrl}).\nيرجى التأكد من تشغيل السيرفر أو الاتصال بالواي فاي.";
                             ShowServerConfig = true;
                             return;
                         }
                     }
 
-                    IsNewPatient = true;
-                    ErrorMessage = "لم يتم العثور على حساب مسجل بهذا الرقم. يرجى إدخال اسمك الكريم لإنشاء حساب جديد.";
-                    return;
+                    ErrorMessage = res.Message ?? "رقم الهاتف أو كلمة المرور غير صحيحة.";
                 }
-            }
-
-            // تسجيل مريض جديد
-            if (string.IsNullOrWhiteSpace(FullName))
-            {
-                ErrorMessage = "يرجى إدخال الاسم بالكامل";
-                return;
-            }
-
-            var newPatientDto = new CreatePatientDto
-            {
-                FullName = FullName.Trim(),
-                PhoneNumber = PhoneNumber.Trim()
-            };
-
-            var created = await _apiClient.CreatePatientAsync(newPatientDto);
-            if (created != null)
-            {
-                SetPatientSession(created);
-                await Shell.Current.GoToAsync("//HomePage");
-            }
-            else
-            {
-                var detail = _apiClient.LastErrorMessage ?? "يرجى التأكد من تشغيل السيرفر ورابط الاتصال.";
-                ErrorMessage = $"تعذر إنشاء الحساب:\n{detail}";
             }
         }
         catch (Exception ex)
@@ -154,6 +232,59 @@ public partial class LoginViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task SaveInitialPasswordAsync()
+    {
+        if (_pendingPatient == null) return;
+
+        if (string.IsNullOrWhiteSpace(InitialPassword) || InitialPassword.Length < 4)
+        {
+            ErrorMessage = "يجب أن تكون كلمة المرور 4 أرقام أو أحرف على الأقل.";
+            return;
+        }
+
+        if (InitialPassword != ConfirmInitialPassword)
+        {
+            ErrorMessage = "كلمة المرور وتأكيد كلمة المرور غير متطابقين.";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            var result = await _apiClient.SetPatientPasswordAsync(_pendingPatient.Id, null, InitialPassword);
+            if (result.Success)
+            {
+                Preferences.Set("SavedPatientPhone", PhoneNumber.Trim());
+                SetPatientSession(_pendingPatient);
+                await Shell.Current.DisplayAlert("تم بنجاح 🔒", "تم تعيين كلمة المرور بنجاح وحماية حسابك!", "دخول");
+                await Shell.Current.GoToAsync("//HomePage");
+            }
+            else
+            {
+                ErrorMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"خطأ: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelInitialPassword()
+    {
+        IsSettingInitialPassword = false;
+        _pendingPatient = null;
+        ErrorMessage = string.Empty;
     }
 
     private void SetPatientSession(PatientDto p)

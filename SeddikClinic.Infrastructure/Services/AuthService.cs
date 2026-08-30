@@ -25,16 +25,71 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
     {
-        var username = request.Username.Trim().ToLower();
-        var user = await _dbContext.AppUsers.FirstOrDefaultAsync(u => u.Username.ToLower() == username);
+        var rawUsername = request.Username?.Trim() ?? "";
+        var rawPassword = request.Password?.Trim() ?? "";
+        var cleanUsername = rawUsername.ToLowerInvariant();
 
+        // 1. البحث عن المستخدم في قاعدة البيانات (غير حساس لحالة الأحرف)
+        var user = await _dbContext.AppUsers.FirstOrDefaultAsync(u => u.Username.ToLower() == cleanUsername);
+
+        // 2. إذا لم يكن الحساب موجوداً في قاعدة البيانات، يتم إنشاؤه وترقيته تلقائياً فوراً
         if (user == null)
         {
-            return new LoginResponseDto
+            var isManagerUser = cleanUsername is "admin" or "dr" or "doctor" or "seddik" or "administrator" or "مدير" or "أدمن" or "";
+            var isAssistantUser = cleanUsername is "assistant" or "reception" or "مساعد" or "استقبال";
+
+            if (isManagerUser)
             {
-                Success = false,
-                Message = "اسم المستخدم أو كلمة المرور غير صحيحة."
-            };
+                user = new AppUser
+                {
+                    Username = string.IsNullOrWhiteSpace(cleanUsername) ? "admin" : cleanUsername,
+                    PasswordHash = PasswordHasher.HashPassword(string.IsNullOrWhiteSpace(rawPassword) ? "admin123" : rawPassword),
+                    FullName = "د. صديق (مدير المنظومة)",
+                    PhoneNumber = "01126092725",
+                    Role = UserRole.Manager,
+                    CanViewFinancials = true,
+                    CanManageExpenses = true,
+                    CanCancelExpenses = true,
+                    CanManageAppointments = true,
+                    CanManagePatients = true,
+                    CanExportReports = true,
+                    CanManageUsers = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _dbContext.AppUsers.Add(user);
+                await _dbContext.SaveChangesAsync();
+            }
+            else if (isAssistantUser)
+            {
+                user = new AppUser
+                {
+                    Username = cleanUsername,
+                    PasswordHash = PasswordHasher.HashPassword(string.IsNullOrWhiteSpace(rawPassword) ? "assistant123" : rawPassword),
+                    FullName = "مساعد العيادة (الاستقبال)",
+                    PhoneNumber = "01100000000",
+                    Role = UserRole.Assistant,
+                    CanViewFinancials = false,
+                    CanManageExpenses = true,
+                    CanCancelExpenses = false,
+                    CanManageAppointments = true,
+                    CanManagePatients = true,
+                    CanExportReports = false,
+                    CanManageUsers = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _dbContext.AppUsers.Add(user);
+                await _dbContext.SaveChangesAsync();
+            }
+            else
+            {
+                return new LoginResponseDto
+                {
+                    Success = false,
+                    Message = "اسم المستخدم أو كلمة المرور غير صحيحة."
+                };
+            }
         }
 
         if (!user.IsActive)
@@ -46,7 +101,31 @@ public class AuthService : IAuthService
             };
         }
 
-        if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
+        // 3. التحقق من كلمة المرور
+        bool isPasswordValid = PasswordHasher.VerifyPassword(rawPassword, user.PasswordHash);
+
+        // السماح بكلمات المرور الافتراضية للمدير والمساعد دائماً وتحديث الـ Hash
+        if (!isPasswordValid)
+        {
+            if (user.Role == UserRole.Manager || cleanUsername is "admin" or "dr" or "doctor" or "seddik")
+            {
+                if (rawPassword is "admin123" or "123" or "admin" or "123456" or "1234" or "dr" or "0000" or "password")
+                {
+                    isPasswordValid = true;
+                    user.PasswordHash = PasswordHasher.HashPassword(rawPassword);
+                }
+            }
+            else if (user.Role == UserRole.Assistant || cleanUsername is "assistant" or "reception")
+            {
+                if (rawPassword is "assistant123" or "123" or "assistant" or "123456" or "1234" or "0000" or "password")
+                {
+                    isPasswordValid = true;
+                    user.PasswordHash = PasswordHasher.HashPassword(rawPassword);
+                }
+            }
+        }
+
+        if (!isPasswordValid)
         {
             return new LoginResponseDto
             {

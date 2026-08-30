@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SeddikClinic.Patient.App.ViewModels"
@@ -8,16 +8,16 @@
              FlowDirection="RightToLeft">
 
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+        <VerticalStackLayout Padding="24,32" Spacing="16" VerticalOptions="Center">
 
             <!-- Logo Header -->
             <Border BackgroundColor="#0284C7"
-                    StrokeShape="RoundRectangle 28"
-                    WidthRequest="80"
-                    HeightRequest="80"
+                    StrokeShape="RoundRectangle 30"
+                    WidthRequest="84"
+                    HeightRequest="84"
                     HorizontalOptions="Center"
                     StrokeThickness="0">
-                <Label Text="+" FontSize="44" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                <Label Text="🦷" FontSize="44" HorizontalOptions="Center" VerticalOptions="Center" />
             </Border>
 
             <Label Text="عيادة د. صديق"
@@ -26,43 +26,189 @@
                    TextColor="#0F172A"
                    HorizontalOptions="Center" />
 
-            <Label Text="مرحباً بك! سجل دخولك لحجز ومتابعة مواعيدك الطبية"
+            <Label Text="لطب وجراحة وتجميل الأسنان"
                    FontSize="14"
+                   TextColor="#0284C7"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   Margin="0,-10,0,0" />
+
+            <Label Text="بوابتك الرقمية لمتابعة ملفك الطبي وحجز مواعيدك بكل أمان وخصوصية"
+                   FontSize="13"
                    TextColor="#64748B"
                    HorizontalOptions="Center"
                    HorizontalTextAlignment="Center" />
 
-            <!-- Login Card -->
+            <!-- Main Auth Card -->
             <Border BackgroundColor="White"
-                    StrokeShape="RoundRectangle 20"
+                    StrokeShape="RoundRectangle 22"
                     StrokeThickness="1"
                     Stroke="#E2E8F0"
                     Padding="22"
                     Margin="0,8,0,0">
-                <VerticalStackLayout Spacing="16">
+                <VerticalStackLayout Spacing="14">
 
-                    <!-- Phone Number Input -->
-                    <Label Text="رقم الهاتف" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" />
-                    <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,4">
-                        <Entry Text="{Binding PhoneNumber}"
-                               Placeholder="مثال: 01012345678"
-                               Keyboard="Telephone"
-                               TextColor="#0F172A"
-                               FontSize="16" />
-                    </Border>
+                    <!-- Mode Toggle (دخول / تسجيل جديد) (Visible when NOT setting initial password) -->
+                    <Grid ColumnDefinitions="*,*" 
+                          BackgroundColor="#F1F5F9" 
+                          Padding="4" 
+                          Margin="0,0,0,6"
+                          IsVisible="{Binding IsSettingInitialPassword, Converter={x:StaticResource InvertedBoolConverter}}">
+                        
+                        <Button Text="🔑 تسجيل الدخول"
+                                Command="{Binding SwitchModeCommand}"
+                                BackgroundColor="{Binding IsRegisterMode, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='Transparent|#0284C7'}"
+                                TextColor="{Binding IsRegisterMode, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#64748B|White'}"
+                                FontAttributes="Bold"
+                                FontSize="13.5"
+                                CornerRadius="10"
+                                HeightRequest="40"
+                                Padding="0" />
 
-                    <!-- Full Name Input (for new patients) -->
-                    <VerticalStackLayout Spacing="6" IsVisible="{Binding IsNewPatient}">
-                        <Label Text="الاسم بالكامل" FontSize="14" FontAttributes="Bold" TextColor="#1E293B" />
-                        <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,4">
-                            <Entry Text="{Binding FullName}"
-                                   Placeholder="أدخل اسمك الثلاثي"
-                                   TextColor="#0F172A"
-                                   FontSize="16" />
+                        <Button Grid.Column="1"
+                                Text="✨ حساب جديد"
+                                Command="{Binding SwitchModeCommand}"
+                                BackgroundColor="{Binding IsRegisterMode, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='#0284C7|Transparent'}"
+                                TextColor="{Binding IsRegisterMode, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='White|#64748B'}"
+                                FontAttributes="Bold"
+                                FontSize="13.5"
+                                CornerRadius="10"
+                                HeightRequest="40"
+                                Padding="0" />
+                    </Grid>
+
+                    <!-- SECTION 1: Regular Login / Register Form -->
+                    <VerticalStackLayout Spacing="12" IsVisible="{Binding IsSettingInitialPassword, Converter={x:StaticResource InvertedBoolConverter}}">
+
+                        <!-- Full Name (Only when registering) -->
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsRegisterMode}">
+                            <Label Text="الاسم بالكامل" FontSize="13.5" FontAttributes="Bold" TextColor="#1E293B" />
+                            <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,2">
+                                <Entry Text="{Binding FullName}"
+                                       Placeholder="أدخل اسمك الثلاثي"
+                                       TextColor="#0F172A"
+                                       FontSize="15" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Phone Number -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="رقم الهاتف" FontSize="13.5" FontAttributes="Bold" TextColor="#1E293B" />
+                            <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="14,2">
+                                <Entry Text="{Binding PhoneNumber}"
+                                       Placeholder="مثال: 01123456789"
+                                       Keyboard="Telephone"
+                                       TextColor="#0F172A"
+                                       FontSize="15" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Password -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="كلمة المرور" FontSize="13.5" FontAttributes="Bold" TextColor="#1E293B" />
+                            <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="12,2">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Entry Text="{Binding Password}"
+                                           Placeholder="أدخل كلمة المرور"
+                                           IsPassword="{Binding IsPasswordHidden}"
+                                           TextColor="#0F172A"
+                                           FontSize="15" />
+                                    <Button Grid.Column="1"
+                                            Text="{Binding IsPasswordHidden, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='👁️|🔒'}"
+                                            Command="{Binding TogglePasswordVisibilityCommand}"
+                                            BackgroundColor="Transparent"
+                                            TextColor="#64748B"
+                                            FontSize="14"
+                                            Padding="4,0"
+                                            WidthRequest="40"
+                                            HeightRequest="36" />
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Confirm Password (Only when registering) -->
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding IsRegisterMode}">
+                            <Label Text="تأكيد كلمة المرور" FontSize="13.5" FontAttributes="Bold" TextColor="#1E293B" />
+                            <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="12,2">
+                                <Entry Text="{Binding ConfirmPassword}"
+                                       Placeholder="أعد كتابة كلمة المرور"
+                                       IsPassword="{Binding IsPasswordHidden}"
+                                       TextColor="#0F172A"
+                                       FontSize="15" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Notice for Clinic Registered Patients -->
+                        <Border BackgroundColor="#F0FDF4" StrokeShape="RoundRectangle 10" Stroke="#BBF7D0" StrokeThickness="1" Padding="10,8" IsVisible="{Binding IsRegisterMode, Converter={x:StaticResource InvertedBoolConverter}}">
+                            <Label Text="💡 إذا كنت مسجلاً مسبقاً لدى استقبال العيادة ولم تعيّن كلمة مرور بعد، اكتب رقم هاتفك واضغط دخول لإنشاء كلمة مرورك."
+                                   FontSize="11.5"
+                                   TextColor="#166534"
+                                   LineHeight="1.3" />
                         </Border>
+
+                        <!-- Submit Button -->
+                        <Button Text="{Binding IsRegisterMode, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='✨ إنشاء حساب وبدء الاستخدام|🔒 تسجيل الدخول'}"
+                                Command="{Binding SubmitCommand}"
+                                BackgroundColor="#0284C7"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="15.5"
+                                CornerRadius="12"
+                                HeightRequest="48"
+                                Margin="0,6,0,0" />
                     </VerticalStackLayout>
 
-                    <!-- Error Message -->
+                    <!-- SECTION 2: Initial Password Setup (For First-Time Clinic Patients) -->
+                    <VerticalStackLayout Spacing="12" IsVisible="{Binding IsSettingInitialPassword}">
+                        <Border BackgroundColor="#FEF3C7" StrokeShape="RoundRectangle 12" Stroke="#FCD34D" StrokeThickness="1" Padding="12,10">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="🔒 حماية حساب المريض" FontAttributes="Bold" TextColor="#92400E" FontSize="14" />
+                                <Label Text="تم العثور على ملفك الطبي بالعيادة. يرجى تعيين كلمة مرور جديدة الآن لضمان أمان وسرية بياناتك الطبية." 
+                                       TextColor="#B45309" FontSize="12" LineHeight="1.3" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="كلمة المرور الجديدة" FontSize="13.5" FontAttributes="Bold" TextColor="#1E293B" />
+                            <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="12,2">
+                                <Entry Text="{Binding InitialPassword}"
+                                       Placeholder="أدخل كلمة مرور (4 خانات فأكثر)"
+                                       IsPassword="True"
+                                       TextColor="#0F172A"
+                                       FontSize="15" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="تأكيد كلمة المرور" FontSize="13.5" FontAttributes="Bold" TextColor="#1E293B" />
+                            <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 12" Stroke="#CBD5E1" StrokeThickness="1" Padding="12,2">
+                                <Entry Text="{Binding ConfirmInitialPassword}"
+                                       Placeholder="أعد كتابة كلمة المرور"
+                                       IsPassword="True"
+                                       TextColor="#0F172A"
+                                       FontSize="15" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Button Text="💾 حفظ كلمة المرور والدخول"
+                                Command="{Binding SaveInitialPasswordCommand}"
+                                BackgroundColor="#10B981"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                FontSize="15"
+                                CornerRadius="12"
+                                HeightRequest="48"
+                                Margin="0,6,0,0" />
+
+                        <Button Text="إلغاء والعودة"
+                                Command="{Binding CancelInitialPasswordCommand}"
+                                BackgroundColor="Transparent"
+                                TextColor="#64748B"
+                                FontSize="13"
+                                HeightRequest="36" />
+                    </VerticalStackLayout>
+
+                    <!-- Error Message Banner -->
                     <Border BackgroundColor="#FEF2F2"
                             StrokeShape="RoundRectangle 10"
                             StrokeThickness="0"
@@ -70,21 +216,10 @@
                             IsVisible="{Binding ErrorMessage, Converter={x:StaticResource StringNotEmptyConverter}}">
                         <Label Text="{Binding ErrorMessage}"
                                TextColor="#DC2626"
-                               FontSize="13"
+                               FontSize="12.5"
                                HorizontalOptions="Center"
                                HorizontalTextAlignment="Center" />
                     </Border>
-
-                    <!-- Submit Button -->
-                    <Button Text="{Binding IsNewPatient, Converter={x:StaticResource BoolToTextConverter}, ConverterParameter='إنشاء حساب ومتابعة|تسجيل الدخول'}"
-                            Command="{Binding SubmitCommand}"
-                            BackgroundColor="#0284C7"
-                            TextColor="White"
-                            FontAttributes="Bold"
-                            FontSize="16"
-                            CornerRadius="14"
-                            HeightRequest="52"
-                            Margin="0,6,0,0" />
 
                     <!-- Loading Indicator -->
                     <ActivityIndicator IsRunning="{Binding IsLoading}"
@@ -95,12 +230,44 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- Server Settings Link -->
+            <Button Text="⚙️ إعدادات اتصال السيرفر"
+                    Command="{Binding ToggleServerConfigCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="#0284C7"
+                    FontSize="12.5"
+                    HorizontalOptions="Center"
+                    HeightRequest="36" />
+
+            <!-- Server Settings Card -->
+            <Border BackgroundColor="White"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="#E2E8F0"
+                    Padding="16"
+                    IsVisible="{Binding ShowServerConfig}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="رابط سيرفر العيادة" FontSize="13" FontAttributes="Bold" TextColor="#1E293B" />
+                    <Border BackgroundColor="#F8FAFC" StrokeShape="RoundRectangle 10" Stroke="#CBD5E1" StrokeThickness="1" Padding="10,2">
+                        <Entry Text="{Binding ServerUrl}" Placeholder="https://..." TextColor="#0F172A" FontSize="13" />
+                    </Border>
+                    <Button Text="فحص الاتصال 🔄"
+                            Command="{Binding TestConnectionCommand}"
+                            BackgroundColor="#F1F5F9"
+                            TextColor="#0284C7"
+                            FontAttributes="Bold"
+                            FontSize="13"
+                            CornerRadius="8"
+                            HeightRequest="38" />
+                </VerticalStackLayout>
+            </Border>
+
             <!-- Footer -->
             <Label Text="عيادة د. صديق التخصصية • جميع الحقوق محفوظة"
                    FontSize="12"
                    TextColor="#94A3B8"
                    HorizontalOptions="Center"
-                   Margin="0,16,0,0" />
+                   Margin="0,8,0,0" />
 
         </VerticalStackLayout>
     </ScrollView>

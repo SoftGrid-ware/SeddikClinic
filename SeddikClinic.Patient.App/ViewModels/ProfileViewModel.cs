@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SeddikClinic.Core.DTOs.Appointments;
 using SeddikClinic.Mobile.Shared.Models;
@@ -131,6 +131,71 @@ public partial class ProfileViewModel : ObservableObject
             else
             {
                 await Shell.Current.DisplayAlert("خطأ", "تعذر حفظ التعديلات", "حسناً");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("خطأ", $"حدث خطأ: {ex.Message}", "حسناً");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ChangePasswordAsync()
+    {
+        if (!PatientSession.PatientId.HasValue) return;
+
+        string currentPass = await Shell.Current.DisplayPromptAsync(
+            "تغيير كلمة المرور 🔒",
+            "أدخل كلمة المرور الحالية (اتركها فارغة إذا لم تكن قد عيّنت كلمة مرور من قبل):",
+            "متابعة",
+            "إلغاء");
+
+        if (currentPass == null) return;
+
+        string newPass = await Shell.Current.DisplayPromptAsync(
+            "كلمة المرور الجديدة 🔑",
+            "أدخل كلمة المرور الجديدة (4 خانات فأكثر):",
+            "حفظ",
+            "إلغاء");
+
+        if (string.IsNullOrWhiteSpace(newPass) || newPass.Length < 4)
+        {
+            if (newPass != null)
+            {
+                await Shell.Current.DisplayAlert("تنبيه", "يجب أن تكون كلمة المرور 4 أحرف أو أرقام على الأقل.", "حسناً");
+            }
+            return;
+        }
+
+        string confirmPass = await Shell.Current.DisplayPromptAsync(
+            "تأكيد كلمة المرور",
+            "أعد كتابة كلمة المرور الجديدة للتأكيد:",
+            "تأكيد وحفظ",
+            "إلغاء");
+
+        if (confirmPass == null) return;
+
+        if (newPass != confirmPass)
+        {
+            await Shell.Current.DisplayAlert("خطأ", "كلمة المرور وتأكيد كلمة المرور غير متطابقين.", "حسناً");
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var res = await _apiClient.SetPatientPasswordAsync(PatientSession.PatientId.Value, currentPass, newPass);
+            if (res.Success)
+            {
+                await Shell.Current.DisplayAlert("تم بنجاح 🔒", "تم تحديث وحفظ كلمة المرور الجديدة بنجاح!", "حسناً");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("فشل الحفظ", res.Message, "حسناً");
             }
         }
         catch (Exception ex)

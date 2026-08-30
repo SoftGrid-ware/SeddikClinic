@@ -172,6 +172,80 @@ public class MobileApiClient
     }
 
     // =========================================================
+    // 🔐 Patient Auth & Password
+    // =========================================================
+    public async Task<PatientLoginResponseDto> PatientLoginAsync(string phone, string? password)
+    {
+        try
+        {
+            var req = new PatientLoginRequestDto { PhoneNumber = phone.Trim(), Password = password?.Trim() };
+            var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/auth/patient/login", req, JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<PatientLoginResponseDto>(JsonOptions);
+            if (result != null)
+            {
+                if (result.Success && !string.IsNullOrEmpty(result.Token))
+                {
+                    SetAuthToken(result.Token);
+                }
+                return result;
+            }
+            return new PatientLoginResponseDto { Success = false, Message = "تعذر تسجيل الدخول، يرجى مراجعة البيانات." };
+        }
+        catch (Exception ex)
+        {
+            LastErrorMessage = ex.Message;
+            return new PatientLoginResponseDto { Success = false, Message = $"تعذر الاتصال بالسيرفر ({_activeBaseUrl}): {ex.Message}" };
+        }
+    }
+
+    public async Task<PatientLoginResponseDto> PatientRegisterAsync(CreatePatientDto dto)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/auth/patient/register", dto, JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<PatientLoginResponseDto>(JsonOptions);
+            if (result != null)
+            {
+                if (result.Success && !string.IsNullOrEmpty(result.Token))
+                {
+                    SetAuthToken(result.Token);
+                }
+                return result;
+            }
+            return new PatientLoginResponseDto { Success = false, Message = "تعذر إنشاء الحساب." };
+        }
+        catch (Exception ex)
+        {
+            LastErrorMessage = ex.Message;
+            return new PatientLoginResponseDto { Success = false, Message = $"تعذر الاتصال بالسيرفر ({_activeBaseUrl}): {ex.Message}" };
+        }
+    }
+
+    public async Task<(bool Success, string Message)> SetPatientPasswordAsync(Guid patientId, string? currentPassword, string newPassword)
+    {
+        try
+        {
+            var req = new SetPatientPasswordDto
+            {
+                PatientId = patientId,
+                CurrentPassword = currentPassword?.Trim(),
+                NewPassword = newPassword.Trim()
+            };
+            var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/auth/patient/set-password", req, JsonOptions);
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "تم حفظ كلمة المرور بنجاح ✅");
+            }
+            var err = await response.Content.ReadAsStringAsync();
+            return (false, string.IsNullOrWhiteSpace(err) ? "تعذر تغيير كلمة المرور." : err);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"خطأ اتصال: {ex.Message}");
+        }
+    }
+
+    // =========================================================
     // 👤 Patient APIs
     // =========================================================
     public async Task<List<PatientDto>> SearchPatientsAsync(string? query = null, int pageIndex = 1, int pageSize = 50)
