@@ -47,10 +47,27 @@
 
                 <!-- Fast Login Quick Buttons for convenience -->
                 <TextBlock Text="أو اختر حساباً للدخول السريع:" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                <UniformGrid Columns="2">
+                <UniformGrid Columns="2" Margin="0,0,0,16">
                     <Button Content="👑 دخول كمدير (admin)" Click="FastLoginAdmin_Click" Style="{StaticResource OutlineButtonStyle}" Height="38" Margin="0,0,6,0" FontSize="11" FontWeight="SemiBold"/>
                     <Button Content="👤 دخول كمساعد (assistant)" Click="FastLoginAssistant_Click" Style="{StaticResource OutlineButtonStyle}" Height="38" Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold"/>
                 </UniformGrid>
+
+                <!-- Server Status & Configuration Badge in Login -->
+                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="LoginServerDot" Width="9" Height="9" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="LoginServerText" Text="🌐 http://localhost:5000 (متصل)" FontSize="11" Foreground="#334155" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Content="⚙️ تغيير السيرفر" Click="ConfigureServerFromLogin_Click" Background="Transparent" Foreground="#0284C7" FontWeight="Bold" FontSize="11" BorderThickness="0" Cursor="Hand" Padding="6,2" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
             </StackPanel>
         </Border>
     </Grid>

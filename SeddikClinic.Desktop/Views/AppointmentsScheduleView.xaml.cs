@@ -184,6 +184,9 @@ public partial class AppointmentsScheduleView : UserControl
     // ➕ حجز موعد جديد مع فحص التعارض والتنبيه الشيك
     // =========================================================
 
+    private PatientDto? _matchedExistingPatient;
+    private System.Threading.CancellationTokenSource? _phoneLookupCts;
+
     private void ToggleAddBookingPanel_Click(object sender, RoutedEventArgs e)
     {
         AddBookingModal.Visibility = AddBookingModal.Visibility == Visibility.Visible
@@ -193,6 +196,8 @@ public partial class AppointmentsScheduleView : UserControl
         if (AddBookingModal.Visibility == Visibility.Visible)
         {
             NewBookingDatePicker.SelectedDate = _selectedDate;
+            _matchedExistingPatient = null;
+            if (ExistingPatientFoundBadge != null) ExistingPatientFoundBadge.Visibility = Visibility.Collapsed;
 
             // إذا كانت قائمة خدمات الحجز فارغة، يتم وضع خدمة الكشف الافتراضية
             if (!_newBookingServices.Any())
@@ -215,6 +220,94 @@ public partial class AppointmentsScheduleView : UserControl
             }
 
             _ = CheckBookingConflictAsync();
+            PatientPhoneInput.Focus();
+        }
+    }
+
+    private async void PatientPhoneInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var rawPhone = PatientPhoneInput.Text?.Trim() ?? "";
+        var cleanDigits = new string(rawPhone.Where(char.IsDigit).ToArray());
+
+        if (cleanDigits.Length >= 9)
+        {
+            _phoneLookupCts?.Cancel();
+            _phoneLookupCts = new System.Threading.CancellationTokenSource();
+            var token = _phoneLookupCts.Token;
+
+            try
+            {
+                await Task.Delay(250, token);
+                if (token.IsCancellationRequested) return;
+
+                await LookupExistingPatientByPhoneAsync(cleanDigits);
+            }
+            catch (TaskCanceledException) { }
+        }
+        else if (cleanDigits.Length < 7)
+        {
+            _matchedExistingPatient = null;
+            if (ExistingPatientFoundBadge != null)
+            {
+                ExistingPatientFoundBadge.Visibility = Visibility.Collapsed;
+            }
+        }
+    }
+
+    private async void PatientPhoneInput_LostFocus(object sender, RoutedEventArgs e)
+    {
+        var rawPhone = PatientPhoneInput.Text?.Trim() ?? "";
+        var cleanDigits = new string(rawPhone.Where(char.IsDigit).ToArray());
+        if (cleanDigits.Length >= 7)
+        {
+            await LookupExistingPatientByPhoneAsync(cleanDigits);
+        }
+    }
+
+    private async Task LookupExistingPatientByPhoneAsync(string phoneDigits)
+    {
+        try
+        {
+            var patients = await _apiClient.SearchPatientsAsync(phoneDigits);
+            var match = patients.FirstOrDefault(p =>
+                p.PhoneNumber.Contains(phoneDigits) || 
+                phoneDigits.Contains(new string(p.PhoneNumber.Where(char.IsDigit).ToArray())) ||
+                (!string.IsNullOrWhiteSpace(p.AlternativePhone) && p.AlternativePhone.Contains(phoneDigits)));
+
+            if (match != null)
+            {
+                _matchedExistingPatient = match;
+                PatientNameInput.Text = match.FullName;
+
+                if (ExistingPatientFoundTitle != null)
+                {
+                    ExistingPatientFoundTitle.Text = $"✅ مريض مسجل مسبقاً: {match.FullName} ({match.PatientCode})";
+                }
+
+                if (ExistingPatientFoundDetails != null)
+                {
+                    var ageStr = match.Age > 0 ? $"{match.Age} سنة" : "غير مسجل";
+                    var medStr = !string.IsNullOrWhiteSpace(match.MedicalHistory) ? match.MedicalHistory : "سليم";
+                    ExistingPatientFoundDetails.Text = $"كود: {match.PatientCode} | السن: {ageStr} | السجل الصحي: {medStr} (سيتم ربط الحجز مباشرة بملفه)";
+                }
+
+                if (ExistingPatientFoundBadge != null)
+                {
+                    ExistingPatientFoundBadge.Visibility = Visibility.Visible;
+                }
+            }
+            else
+            {
+                _matchedExistingPatient = null;
+                if (ExistingPatientFoundBadge != null)
+                {
+                    ExistingPatientFoundBadge.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore lookup background failures
         }
     }
 
@@ -335,16 +428,16 @@ public partial class AppointmentsScheduleView : UserControl
         else
         {
             InstallmentDetailsPanel.Visibility = Visibility.Collapsed;
-            PaymentTypeBadge.Background = new SolidColorBrush(Color.FromRgb(220, 252, 231)); // #DCFCE7
-            PaymentTypeBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(187, 247, 208)); // #BBF7D0
-            PaymentTypeBadgeText.Text = "🟢 سداد كاش بالكامل";
-            PaymentTypeBadgeText.Foreground = new SolidColorBrush(Color.FromRgb(21, 128, 61)); // #15803D
+            PaymentTypeBadge.Background = new SolidColorBrush(Color.FromRgb(254, 242, 242)); // #FEF2F2
+            PaymentTypeBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(254, 202, 202)); // #FECACA
+            PaymentTypeBadgeText.Text = "🔴 السداد عند الكشف في العيادة";
+            PaymentTypeBadgeText.Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38)); // #DC2626
             InstallmentModeContainer.Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)); // #F8FAFC
             InstallmentModeContainer.BorderBrush = new SolidColorBrush(Color.FromRgb(226, 232, 240)); // #E2E8F0
 
-            if (DepositInput != null && FeesInput != null)
+            if (DepositInput != null)
             {
-                DepositInput.Text = FeesInput.Text;
+                DepositInput.Text = "0";
             }
         }
 
@@ -361,8 +454,16 @@ public partial class AppointmentsScheduleView : UserControl
         if (FeesInput == null || DepositInput == null || BookingRemainingBadgeText == null) return;
 
         decimal.TryParse(FeesInput.Text.Trim(), out var fees);
+        decimal.TryParse(DiscountInput?.Text.Trim(), out var discount);
         decimal.TryParse(DepositInput.Text.Trim(), out var deposit);
-        var remaining = Math.Max(0, fees - deposit);
+
+        var netFees = Math.Max(0, fees - discount);
+        var remaining = Math.Max(0, netFees - deposit);
+
+        if (BookingNetFeesBadgeText != null)
+        {
+            BookingNetFeesBadgeText.Text = $"{netFees:N0} ج.م";
+        }
 
         BookingRemainingBadgeText.Text = $"{remaining:N0} ج.م";
     }
@@ -382,8 +483,9 @@ public partial class AppointmentsScheduleView : UserControl
         }
 
         decimal.TryParse(FeesInput.Text, out var fees);
+        decimal.TryParse(DiscountInput?.Text, out var discount);
         var totalFees = fees > 0 ? fees : 250m;
-        decimal deposit;
+        decimal deposit = 0m;
 
         if (EnableInstallmentCheckBox?.IsChecked == true)
         {
@@ -391,7 +493,7 @@ public partial class AppointmentsScheduleView : UserControl
         }
         else
         {
-            deposit = totalFees; // كاش بالكامل
+            deposit = 0m; // لم يدفع بعد - يرحل تلقائياً إلى الفواتير والتحصيل لسداده عند الكشف
         }
 
         var bookingDate = NewBookingDatePicker.SelectedDate ?? _selectedDate;
@@ -405,6 +507,7 @@ public partial class AppointmentsScheduleView : UserControl
 
         var dto = new CreateAppointmentDto
         {
+            PatientId = _matchedExistingPatient?.Id,
             NewPatientFullName = PatientNameInput.Text.Trim(),
             NewPatientPhone = PatientPhoneInput.Text.Trim(),
             AppointmentDate = bookingDate,
@@ -412,6 +515,7 @@ public partial class AppointmentsScheduleView : UserControl
             DurationMinutes = 30,
             ServiceType = combinedService,
             TotalFees = totalFees,
+            DiscountAmount = discount,
             DepositAmount = deposit
         };
 
@@ -431,15 +535,40 @@ public partial class AppointmentsScheduleView : UserControl
 
         if (conflict != null)
         {
-            // إظهار التنبيه الشيك الأنيق
+            // إظهار التنبيه واقتراح أقرب وقت متاح بعده تلقائياً
             _pendingBookingDto = dto;
             ConflictDetailsText.Text = $"يوجد حجز مسجل مسبقاً في هذا التوقيت ({timeText}) بتاريخ ({bookingDate:yyyy/MM/dd}):\n• المريض: {conflict.PatientName} (هاتف: {conflict.PatientPhone})\n• الخدمة: {conflict.ServiceType}";
+            
+            // اختيار الوقت التالي المتاح تلقائياً
+            AutoSelectNextAvailableTimeSlot(dateAppointments);
+
             ConflictWarningModal.Visibility = Visibility.Visible;
             return;
         }
 
         // لا يوجد تعارض - المتابعة بالحفظ مباشرة
         await ExecuteCreateBookingAsync(dto);
+    }
+
+    private void AutoSelectNextAvailableTimeSlot(List<AppointmentDto> dateAppointments)
+    {
+        var bookedTags = dateAppointments
+            .Where(a => a.Status != AppointmentStatus.Cancelled)
+            .Select(a => a.StartTime.ToString(@"hh\:mm"))
+            .ToHashSet();
+
+        var currentIndex = AppointmentTimeCombo.SelectedIndex;
+        for (int i = currentIndex + 1; i < AppointmentTimeCombo.Items.Count; i++)
+        {
+            if (AppointmentTimeCombo.Items[i] is ComboBoxItem item && item.Tag is string tag)
+            {
+                if (!bookedTags.Contains(tag))
+                {
+                    AppointmentTimeCombo.SelectedIndex = i;
+                    break;
+                }
+            }
+        }
     }
 
     private async void ConfirmConflictBooking_Click(object sender, RoutedEventArgs e)
@@ -468,6 +597,8 @@ public partial class AppointmentsScheduleView : UserControl
 
             PatientNameInput.Text = "";
             PatientPhoneInput.Text = "";
+            _matchedExistingPatient = null;
+            if (ExistingPatientFoundBadge != null) ExistingPatientFoundBadge.Visibility = Visibility.Collapsed;
             _newBookingServices.Clear();
             if (EnableInstallmentCheckBox != null) EnableInstallmentCheckBox.IsChecked = false;
             BookingConflictBanner.Visibility = Visibility.Collapsed;
@@ -1029,6 +1160,90 @@ public partial class AppointmentsScheduleView : UserControl
         EditServiceModal.Visibility = Visibility.Collapsed;
     }
 
+    // =========================================================
+    // 💊 إصدار / عرض روشتة طبية للموعد
+    // =========================================================
+
+    private bool IsPrescriptionReadOnlyForCurrentUser()
+    {
+        var user = _apiClient.CurrentUser;
+        if (user == null) return false;
+        if (user.Role == UserRole.Manager) return false;
+        return !user.CanEditPrescriptions;
+    }
+
+    private void PrescriptionFromAppointment_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetAppointmentFromSender(sender);
+        if (apt != null)
+        {
+            var isReadOnly = IsPrescriptionReadOnlyForCurrentUser();
+            var rxDialog = new PrescriptionDialog(_apiClient, apt.PatientId, apt.PatientName, apt.PatientPhone, apt.Id, isReadOnly: isReadOnly);
+            rxDialog.Owner = Window.GetWindow(this);
+            rxDialog.ShowDialog();
+        }
+    }
+
+    private void AppointmentsGridContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        var user = _apiClient.CurrentUser;
+        if (user == null) return;
+
+        if (sender is ContextMenu menu)
+        {
+            // التحقق من صلاحية استخدام قائمة الكليك يمين
+            if (!user.CanUseQuickActions && user.Role != UserRole.Manager)
+            {
+                foreach (var item in menu.Items)
+                {
+                    if (item is MenuItem mi) mi.IsEnabled = false;
+                }
+                return;
+            }
+
+            foreach (var item in menu.Items)
+            {
+                if (item is MenuItem mi) mi.IsEnabled = true;
+            }
+
+            if (GridContextPrescriptionItem != null)
+            {
+                if (!user.CanEditPrescriptions && user.Role != UserRole.Manager)
+                {
+                    GridContextPrescriptionItem.Header = "👁️ عرض وطباعة الروشتة (معاينة فقط)";
+                }
+                else
+                {
+                    GridContextPrescriptionItem.Header = "💊 فتح الروشتة الطبية الذكية (e-Prescription)";
+                }
+            }
+        }
+    }
+
+    private void AppointmentRowContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        var user = _apiClient.CurrentUser;
+        if (user == null) return;
+
+        if (sender is ContextMenu menu)
+        {
+            foreach (var item in menu.Items)
+            {
+                if (item is MenuItem mi && mi.Header?.ToString()?.Contains("روشتة") == true)
+                {
+                    if (!user.CanEditPrescriptions && user.Role != UserRole.Manager)
+                    {
+                        mi.Header = "👁️  عرض وطباعة الروشتة (معاينة فقط)";
+                    }
+                    else
+                    {
+                        mi.Header = "💊  إصدار وتعديل الروشتة الطبية";
+                    }
+                }
+            }
+        }
+    }
+
     private async void OpenWorkingHoursModal_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -1072,6 +1287,443 @@ public partial class AppointmentsScheduleView : UserControl
         else
         {
             ClinicMessageBox.Show("تعذر حفظ مواعيد العمل. يرجى المحاولة مرة أخرى.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // =========================================================
+    // 🟢 إرسال رسائل الواتساب للحجز
+    // =========================================================
+
+    private void SendWhatsAppConfirmation_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetAppointmentFromSender(sender);
+        if (apt != null)
+        {
+            var url = SeddikClinic.Core.Helpers.WhatsAppNotificationHelper.GenerateAppointmentConfirmationUrl(apt);
+            OpenExternalUrl(url);
+        }
+    }
+
+    private void SendWhatsAppReminder_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetAppointmentFromSender(sender);
+        if (apt != null)
+        {
+            var url = SeddikClinic.Core.Helpers.WhatsAppNotificationHelper.GenerateAppointmentReminderUrl(apt);
+            OpenExternalUrl(url);
+        }
+    }
+
+    private void SendWhatsAppPostCare_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetAppointmentFromSender(sender);
+        if (apt != null)
+        {
+            var url = SeddikClinic.Core.Helpers.WhatsAppNotificationHelper.GeneratePostTreatmentInstructionsUrl(apt.PatientName, apt.PatientPhone, apt.ServiceType ?? "كشف أسنان");
+            OpenExternalUrl(url);
+        }
+    }
+
+    // =========================================================
+    // 🖱️ معالجات القائمة السريعة والكليك يمين
+    // =========================================================
+
+    private AppointmentDto? GetSelectedAppointment(object sender)
+    {
+        return AppointmentsGrid.SelectedItem as AppointmentDto;
+    }
+
+    private void ContextMenu_AddService_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null) OpenAddServiceForAppointment(apt);
+    }
+
+    private void QuickAddService_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetAppointmentFromSender(sender) ?? GetSelectedAppointment(sender);
+        if (apt != null) OpenAddServiceForAppointment(apt);
+    }
+
+    private void ContextMenu_OpenPatientInvoices_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null) OpenPatientInvoicesForAppointment(apt);
+    }
+
+    private void QuickOpenInvoices_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetAppointmentFromSender(sender) ?? GetSelectedAppointment(sender);
+        if (apt != null) OpenPatientInvoicesForAppointment(apt);
+    }
+
+    private void ContextMenu_OpenDentalChart_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null)
+        {
+            var chartWin = new DentalChartingWindow(_apiClient, apt.PatientId, apt.PatientName);
+            chartWin.Owner = Window.GetWindow(this);
+            chartWin.ShowDialog();
+        }
+    }
+
+    private void QuickOpenDentalChart_Click(object sender, RoutedEventArgs e)
+    {
+        ContextMenu_OpenDentalChart_Click(sender, e);
+    }
+
+    private void ContextMenu_OpenPrescription_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null)
+        {
+            var rxDialog = new PrescriptionDialog(_apiClient, apt.PatientId, apt.PatientName, apt.PatientPhone, apt.Id);
+            rxDialog.Owner = Window.GetWindow(this);
+            rxDialog.ShowDialog();
+        }
+    }
+
+    private void QuickOpenPrescription_Click(object sender, RoutedEventArgs e)
+    {
+        ContextMenu_OpenPrescription_Click(sender, e);
+    }
+
+    private void ContextMenu_OpenMedicalHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null) OpenMedicalProfileForAppointment(apt);
+    }
+
+    private void QuickViewMedicalRecord_Click(object sender, RoutedEventArgs e)
+    {
+        ContextMenu_OpenMedicalHistory_Click(sender, e);
+    }
+
+    private void ContextMenu_OpenVisitsHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null) OpenMedicalProfileForAppointment(apt);
+    }
+
+    private void ContextMenu_OpenWhatsApp_Click(object sender, RoutedEventArgs e)
+    {
+        var apt = GetSelectedAppointment(sender);
+        if (apt != null)
+        {
+            var url = SeddikClinic.Core.Helpers.WhatsAppNotificationHelper.GenerateAppointmentReminderUrl(apt);
+            OpenExternalUrl(url);
+        }
+    }
+
+    private void QuickOpenWhatsApp_Click(object sender, RoutedEventArgs e)
+    {
+        ContextMenu_OpenWhatsApp_Click(sender, e);
+    }
+
+    // =========================================================
+    // 📋 إدارة السجل والتاريخ الطبي من جدول المواعيد
+    // =========================================================
+
+    private AppointmentDto? _currentSelectedAppointmentForModal;
+    private PatientDto? _currentModalPatient;
+
+    private async void OpenMedicalProfileForAppointment(AppointmentDto apt)
+    {
+        _currentSelectedAppointmentForModal = apt;
+        try
+        {
+            var patients = await _apiClient.SearchPatientsAsync(apt.PatientPhone);
+            _currentModalPatient = patients.FirstOrDefault(p => p.Id == apt.PatientId) ?? patients.FirstOrDefault();
+
+            ModalPatientSubheaderText.Text = $"ملف المريض الكامل: {apt.PatientName}";
+            ModalPatientCodeText.Text = _currentModalPatient?.PatientCode ?? "P-" + apt.PatientId.ToString().Substring(0, 4);
+            ModalPatientPhoneText.Text = apt.PatientPhone;
+            ModalPatientAgeGenderText.Text = _currentModalPatient != null ? $"{_currentModalPatient.Age} سنة" : "غير محدد";
+            ModalPatientAllergiesText.Text = !string.IsNullOrWhiteSpace(_currentModalPatient?.Allergies) ? _currentModalPatient.Allergies : "لا توجد حساسية مسجلة";
+            ModalPatientHistoryText.Text = !string.IsNullOrWhiteSpace(_currentModalPatient?.MedicalHistory) ? _currentModalPatient.MedicalHistory : "سليم - لا توجد أمراض مزمنة مسجلة";
+
+            var patientVisits = _appointments.Where(a => a.PatientId == apt.PatientId || a.PatientPhone == apt.PatientPhone).ToList();
+            ModalPatientVisitsCountText.Text = $"{patientVisits.Count} زيارة";
+            VisitsHistoryGrid.ItemsSource = patientVisits;
+
+            MedicalRecordModal.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            ClinicMessageBox.Show($"تعذر فتح السجل الطبي: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void CloseMedicalRecordModal_Click(object sender, RoutedEventArgs e)
+    {
+        MedicalRecordModal.Visibility = Visibility.Collapsed;
+    }
+
+    private void EditMedicalHistoryFromModal_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSelectedAppointmentForModal == null) return;
+
+        EditHistoryPatientSubtitle.Text = $"المريض: {_currentSelectedAppointmentForModal.PatientName} | هاتف: {_currentSelectedAppointmentForModal.PatientPhone}";
+        EditModalPatientNameText.Text = _currentSelectedAppointmentForModal.PatientName;
+        EditModalPatientCodeText.Text = _currentModalPatient?.PatientCode ?? "P-1001";
+        EditModalPatientPhoneText.Text = _currentSelectedAppointmentForModal.PatientPhone;
+
+        EditModalMedicalHistoryInput.Text = _currentModalPatient?.MedicalHistory ?? "";
+        EditModalAllergiesInput.Text = _currentModalPatient?.Allergies ?? "";
+
+        EditMedicalHistoryModal.Visibility = Visibility.Visible;
+    }
+
+    private void CloseEditMedicalHistoryModal_Click(object sender, RoutedEventArgs e)
+    {
+        EditMedicalHistoryModal.Visibility = Visibility.Collapsed;
+    }
+
+    private void QuickAddHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string tag)
+        {
+            var cur = EditModalMedicalHistoryInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(cur) || cur.Contains("سليم")) EditModalMedicalHistoryInput.Text = tag;
+            else if (!cur.Contains(tag)) EditModalMedicalHistoryInput.Text = $"{cur}، {tag}";
+        }
+    }
+
+    private void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        EditModalMedicalHistoryInput.Text = "سليم - لا توجد أمراض مزمنة مسجلة";
+    }
+
+    private void QuickAddAllergy_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string tag)
+        {
+            var cur = EditModalAllergiesInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(cur) || cur.Contains("لا توجد")) EditModalAllergiesInput.Text = tag;
+            else if (!cur.Contains(tag)) EditModalAllergiesInput.Text = $"{cur}، {tag}";
+        }
+    }
+
+    private void ClearAllergies_Click(object sender, RoutedEventArgs e)
+    {
+        EditModalAllergiesInput.Text = "لا توجد حساسية مسجلة";
+    }
+
+    private async void SaveMedicalHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentModalPatient == null) return;
+
+        try
+        {
+            var newHistory = EditModalMedicalHistoryInput.Text.Trim();
+            var newAllergies = EditModalAllergiesInput.Text.Trim();
+
+            var updateDto = new CreatePatientDto
+            {
+                FullName = _currentModalPatient.FullName,
+                PhoneNumber = _currentModalPatient.PhoneNumber,
+                AlternativePhone = _currentModalPatient.AlternativePhone,
+                NationalId = _currentModalPatient.NationalId,
+                Gender = _currentModalPatient.Gender,
+                Age = _currentModalPatient.Age,
+                BirthDate = _currentModalPatient.BirthDate,
+                Address = _currentModalPatient.Address,
+                BloodGroup = _currentModalPatient.BloodGroup,
+                MedicalHistory = newHistory,
+                Allergies = newAllergies,
+                Notes = _currentModalPatient.Notes
+            };
+
+            var updated = await _apiClient.UpdatePatientAsync(_currentModalPatient.Id, updateDto);
+            if (updated != null)
+            {
+                _currentModalPatient.MedicalHistory = newHistory;
+                _currentModalPatient.Allergies = newAllergies;
+                ModalPatientHistoryText.Text = !string.IsNullOrWhiteSpace(newHistory) ? newHistory : "سليم - لا توجد أمراض مزمنة مسجلة";
+                ModalPatientAllergiesText.Text = !string.IsNullOrWhiteSpace(newAllergies) ? newAllergies : "لا توجد حساسية مسجلة";
+
+                EditMedicalHistoryModal.Visibility = Visibility.Collapsed;
+                ClinicMessageBox.Show($"تم تحديث البيانات الطبية للمريض '{_currentModalPatient.FullName}' بنجاح! ✅", "تم الحفظ", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            ClinicMessageBox.Show($"خطأ أثناء حفظ التعديلات الطبية: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // =========================================================
+    // ➕ إضافة وتعديل الخدمات والرسوم من جدول المواعيد
+    // =========================================================
+
+    private void OpenAddServiceForAppointment(AppointmentDto apt)
+    {
+        _currentSelectedAppointmentForModal = apt;
+        AddServicePatientNameSubtitle.Text = $"للمريض: {apt.PatientName} (موعد: {apt.StartTimeFormatted})";
+        CustomServiceNameInput.Text = "";
+        ServicePriceInput.Text = "350";
+        ServiceDiscountInput.Text = "0";
+        ServiceDatePicker.SelectedDate = apt.AppointmentDate;
+        ServiceNotesInput.Text = "";
+        UpdateNetServicePricePreview();
+
+        if (PatientServiceCatalogCombo.Items.Count == 0)
+        {
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "كشف واستشارة طبية (350 ج.م)", Tag = "350" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "تنظيف جير وتلميع أسنان (500 ج.م)", Tag = "500" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "حشو تجميلي ليزر (700 ج.م)", Tag = "700" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "علاج جذور وعصب (1200 ج.م)", Tag = "1200" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "خلع سن جراحي (800 ج.م)", Tag = "800" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "تركيب طربوش زيركون (2500 ج.م)", Tag = "2500" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "زراعة أسنان فورية (9000 ج.م)", Tag = "9000" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "تبييض أسنان ليزر Zoom (3000 ج.م)", Tag = "3000" });
+            PatientServiceCatalogCombo.Items.Add(new ComboBoxItem { Content = "خدمة / إجراء طبي مخصص...", Tag = "0" });
+        }
+        PatientServiceCatalogCombo.SelectedIndex = 0;
+
+        AddPatientServiceModal.Visibility = Visibility.Visible;
+    }
+
+    private void AddServicePriceOrDiscount_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateNetServicePricePreview();
+    }
+
+    private void UpdateNetServicePricePreview()
+    {
+        if (ServicePriceInput == null || ServiceDiscountInput == null || NetServicePricePreviewText == null) return;
+
+        decimal.TryParse(ServicePriceInput.Text.Trim(), out var price);
+        decimal.TryParse(ServiceDiscountInput.Text.Trim(), out var discount);
+        var net = Math.Max(0, price - discount);
+
+        NetServicePricePreviewText.Text = discount > 0 ? $"{net:N0} ج.م (وفر {discount:N0} ج.م)" : $"{net:N0} ج.م";
+    }
+
+    private void PatientServiceCatalogCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (PatientServiceCatalogCombo?.SelectedItem is ComboBoxItem item)
+        {
+            var content = item.Content?.ToString() ?? "";
+            var price = item.Tag?.ToString() ?? "0";
+
+            if (content.Contains("مخصص"))
+            {
+                CustomServiceNameInput.Text = "";
+                ServicePriceInput.Text = "0";
+                CustomServiceNameInput.Focus();
+            }
+            else
+            {
+                var cleanName = content.Split('(')[0].Trim();
+                CustomServiceNameInput.Text = cleanName;
+                ServicePriceInput.Text = price;
+            }
+            UpdateNetServicePricePreview();
+        }
+    }
+
+    private void CloseAddServiceModal_Click(object sender, RoutedEventArgs e)
+    {
+        AddPatientServiceModal.Visibility = Visibility.Collapsed;
+    }
+
+    private async void ConfirmAddService_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSelectedAppointmentForModal == null) return;
+
+        var serviceName = CustomServiceNameInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(serviceName))
+        {
+            ClinicMessageBox.Show("يرجى إدخال أو اختيار اسم الخدمة الطبية.", "بيانات ناقصة", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!decimal.TryParse(ServicePriceInput.Text.Trim(), out var price) || price < 0)
+        {
+            ClinicMessageBox.Show("يرجى إدخال سعر صحيح للخدمة.", "بيانات غير صحيحة", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        decimal.TryParse(ServiceDiscountInput.Text.Trim(), out var discount);
+        var netAddedPrice = Math.Max(0, price - discount);
+
+        try
+        {
+            var existingService = _currentSelectedAppointmentForModal.ServiceType;
+            var updatedService = string.IsNullOrWhiteSpace(existingService) ? serviceName : $"{existingService} + {serviceName}";
+            var newTotal = _currentSelectedAppointmentForModal.TotalFees + netAddedPrice;
+            var newDiscount = _currentSelectedAppointmentForModal.DiscountAmount + discount;
+
+            _currentSelectedAppointmentForModal.ServiceType = updatedService;
+            _currentSelectedAppointmentForModal.TotalFees = newTotal;
+            _currentSelectedAppointmentForModal.DiscountAmount = newDiscount;
+
+            await _apiClient.UpdateAppointmentServiceAsync(_currentSelectedAppointmentForModal.Id, updatedService, newTotal);
+            await _apiClient.UpdateAppointmentFinancialsAsync(
+                _currentSelectedAppointmentForModal.Id,
+                newTotal,
+                _currentSelectedAppointmentForModal.DepositAmount,
+                _currentSelectedAppointmentForModal.IsDepositPaid,
+                newDiscount);
+
+            AddPatientServiceModal.Visibility = Visibility.Collapsed;
+            await LoadAppointmentsDataAsync();
+
+            ClinicMessageBox.Show(
+                discount > 0 
+                    ? $"تمت إضافة خدمة '{serviceName}' بقيمة ({price:N0} ج.م) مع خصم ({discount:N0} ج.م) وصافي مضاف ({netAddedPrice:N0} ج.م) بنجاح! ✅\nإجمالي الحساب الجديد: ({newTotal:N0} ج.م)"
+                    : $"تمت إضافة خدمة '{serviceName}' بقيمة ({price:N0} ج.م) للمريض بنجاح وتحديث إجمالي الرسوم إلى ({newTotal:N0} ج.م)! ✅", 
+                "تمت الإضافة بنجاح", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ClinicMessageBox.Show($"خطأ أثناء إضافة الخدمة: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // =========================================================
+    // 🧾 كشف حساب فواتير ومطالبات المريض
+    // =========================================================
+
+    private void OpenPatientInvoicesForAppointment(AppointmentDto apt)
+    {
+        _currentSelectedAppointmentForModal = apt;
+        InvoicesModalPatientSubtitle.Text = $"كشف حساب المريض: {apt.PatientName} (هاتف: {apt.PatientPhone})";
+
+        var patientAppointments = _appointments
+            .Where(a => a.PatientId == apt.PatientId || a.PatientPhone == apt.PatientPhone)
+            .ToList();
+
+        var totalFees = patientAppointments.Sum(a => a.TotalFees);
+        var totalPaid = patientAppointments.Sum(a => a.DepositAmount);
+        var remaining = Math.Max(0, totalFees - totalPaid);
+
+        InvoicesModalTotalFeesText.Text = $"{totalFees:N2} ج.م";
+        InvoicesModalPaidText.Text = $"{totalPaid:N2} ج.م";
+        InvoicesModalRemainingText.Text = $"{remaining:N2} ج.م";
+
+        PatientInvoicesGrid.ItemsSource = patientAppointments;
+        PatientInvoicesModal.Visibility = Visibility.Visible;
+    }
+
+    private void ClosePatientInvoicesModal_Click(object sender, RoutedEventArgs e)
+    {
+        PatientInvoicesModal.Visibility = Visibility.Collapsed;
+    }
+
+    private static void OpenExternalUrl(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ClinicMessageBox.Show($"تعذر فتح الرابط: {ex.Message}", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

@@ -417,4 +417,319 @@ public partial class PatientDirectoryView : UserControl
             ClinicMessageBox.Show($"خطأ أثناء تسجيل الدفعة: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    // =========================================================
+    // 🦷 فتح خريطة الأسنان التفاعلية (Odontogram)
+    // =========================================================
+
+    private void OpenDentalChart_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is PatientDto patient)
+        {
+            var chartWindow = new DentalChartingWindow(_apiClient, patient.Id, patient.FullName);
+            chartWindow.Owner = Window.GetWindow(this);
+            chartWindow.ShowDialog();
+        }
+    }
+
+    // =========================================================
+    // 💊 فتح نافذة الروشتة الإلكترونية الذكية (e-Prescription)
+    // =========================================================
+
+    private void OpenPrescription_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is PatientDto patient)
+        {
+            var rxDialog = new PrescriptionDialog(_apiClient, patient.Id, patient.FullName, patient.PhoneNumber);
+            rxDialog.Owner = Window.GetWindow(this);
+            rxDialog.ShowDialog();
+        }
+    }
+
+    // =========================================================
+    // 🟢 فتح محادثة الواتساب المباشرة
+    // =========================================================
+
+    private void OpenWhatsApp_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is PatientDto patient)
+        {
+            var formattedPhone = SeddikClinic.Core.Helpers.WhatsAppNotificationHelper.FormatPhoneNumberForWhatsApp(patient.PhoneNumber);
+            var url = $"https://wa.me/{formattedPhone}?text={Uri.EscapeDataString($"مرحباً بك أستاذ/ة {patient.FullName} 🌸\nتحياتنا من عيادة د. صديق لطب وجراحة الأسنان 🦷✨\nيسعدنا تواصلك معنا دائماً!")}";
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                ClinicMessageBox.Show($"تعذر فتح الواتساب: {ex.Message}", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+    }
+
+    // =========================================================
+    // 🩺 إضافة وتعديل الخدمات الطبية والرسوم للمريض
+    // =========================================================
+
+    private PatientDto? _selectedPatientForService;
+
+    private readonly List<(string Name, decimal Price)> _standardServices = new()
+    {
+        ("كشف واستشارة طبية شاملة", 250m),
+        ("تنظيف وتلميع الأسنان وإزالة الجير (Scaling & Polishing)", 400m),
+        ("حشو تجميلي كومبوزيت (Composite Filling)", 500m),
+        ("جلسة علاج جذور وعصب (Root Canal Treatment)", 850m),
+        ("تركيب طربوش زيركون (Zirconia Crown)", 1800m),
+        ("تركيب طربوش بورسلين (Porcelain Crown)", 1200m),
+        ("خلع ضرس عادي (Simple Extraction)", 350m),
+        ("خلع جراحي لضرس العقل (Surgical Extraction)", 1200m),
+        ("جلسة تبييض أسنان ليزر / زووم (Teeth Whitening)", 2200m),
+        ("تركيب تقويم أسنان - دفعة أولى (Orthodontic Down Payment)", 3500m),
+        ("زراعة أسنان ألماني/كوري (Dental Implant)", 6500m),
+        ("أشعة ديجيتال بريمال (Periapical X-Ray)", 150m)
+    };
+
+    private void AddPatientService_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is PatientDto patient)
+        {
+            OpenAddPatientServiceModal(patient);
+        }
+    }
+
+    private void OpenAddPatientServiceModal(PatientDto patient)
+    {
+        _selectedPatientForService = patient;
+        AddServicePatientNameSubtitle.Text = $"للمريض: {patient.FullName} (كود: {patient.PatientCode})";
+
+        PatientServiceCatalogCombo.ItemsSource = _standardServices.Select(s => s.Name).ToList();
+        if (PatientServiceCatalogCombo.Items.Count > 0)
+        {
+            PatientServiceCatalogCombo.SelectedIndex = 0;
+        }
+
+        CustomServiceNameInput.Text = "";
+        ServicePriceInput.Text = "250";
+        ServiceDiscountInput.Text = "0";
+        ServiceDatePicker.SelectedDate = DateTime.Today;
+        ServiceNotesInput.Text = "";
+        UpdateNetServicePricePreview();
+
+        AddPatientServiceModal.Visibility = Visibility.Visible;
+    }
+
+    private void AddServicePriceOrDiscount_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateNetServicePricePreview();
+    }
+
+    private void UpdateNetServicePricePreview()
+    {
+        if (ServicePriceInput == null || ServiceDiscountInput == null || NetServicePricePreviewText == null) return;
+
+        decimal.TryParse(ServicePriceInput.Text.Trim(), out var price);
+        decimal.TryParse(ServiceDiscountInput.Text.Trim(), out var discount);
+        var net = Math.Max(0, price - discount);
+
+        NetServicePricePreviewText.Text = discount > 0 ? $"{net:N0} ج.م (وفر {discount:N0} ج.م)" : $"{net:N0} ج.م";
+    }
+
+    private void CloseAddServiceModal_Click(object sender, RoutedEventArgs e)
+    {
+        AddPatientServiceModal.Visibility = Visibility.Collapsed;
+        _selectedPatientForService = null;
+    }
+
+    private void PatientServiceCatalogCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (PatientServiceCatalogCombo.SelectedItem is string selectedName)
+        {
+            var matched = _standardServices.FirstOrDefault(s => s.Name == selectedName);
+            if (matched.Price > 0)
+            {
+                ServicePriceInput.Text = matched.Price.ToString("0");
+                CustomServiceNameInput.Text = matched.Name;
+            }
+            UpdateNetServicePricePreview();
+        }
+    }
+
+    private async void ConfirmAddService_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedPatientForService == null) return;
+
+        var serviceName = !string.IsNullOrWhiteSpace(CustomServiceNameInput.Text)
+            ? CustomServiceNameInput.Text.Trim()
+            : (PatientServiceCatalogCombo.SelectedItem?.ToString() ?? "خدمة طبية");
+
+        if (!decimal.TryParse(ServicePriceInput.Text.Trim(), out var price) || price < 0)
+        {
+            ClinicMessageBox.Show("يرجى إدخال سعر خدمة صحيح.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        decimal.TryParse(ServiceDiscountInput.Text.Trim(), out var discount);
+        var netPrice = Math.Max(0, price - discount);
+        var serviceDate = ServiceDatePicker.SelectedDate ?? DateTime.Today;
+
+        try
+        {
+            var appointmentDto = new CreateAppointmentDto
+            {
+                PatientId = _selectedPatientForService.Id,
+                NewPatientFullName = _selectedPatientForService.FullName,
+                NewPatientPhone = _selectedPatientForService.PhoneNumber,
+                AppointmentDate = serviceDate,
+                StartTimeString = DateTime.Now.ToString("HH:mm"),
+                DurationMinutes = 30,
+                ServiceType = serviceName,
+                TotalFees = price,
+                DiscountAmount = discount,
+                DepositAmount = 0, // لم يدفع بعد - يرحل تلقائياً للفواتير
+                Notes = ServiceNotesInput.Text.Trim()
+            };
+
+            await _apiClient.CreateAppointmentAsync(appointmentDto);
+            ClinicMessageBox.Show(
+                discount > 0
+                    ? $"تمت إضافة خدمة '{serviceName}' بقيمة ({price:N0} ج.م) مع خصم ({discount:N0} ج.م) وصافي مضاف ({netPrice:N0} ج.م) بنجاح وترحيلها للفواتير!"
+                    : $"تمت إضافة خدمة '{serviceName}' بتكلفة {price:N0} ج.م للمريض بنجاح وترحيلها للفواتير والتحصيل!", 
+                "نجاح", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+
+            AddPatientServiceModal.Visibility = Visibility.Collapsed;
+            _selectedPatientForService = null;
+            await LoadPatientsAsync();
+        }
+        catch (Exception ex)
+        {
+            ClinicMessageBox.Show($"فشل إضافة الخدمة: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // =========================================================
+    // 🧾 كشف حساب فواتير ومطالبات المريض
+    // =========================================================
+
+    private async void OpenPatientInvoices_Click(object sender, RoutedEventArgs e)
+    {
+        PatientDto? targetPatient = null;
+        if (sender is Button btn && btn.DataContext is PatientDto p)
+        {
+            targetPatient = p;
+        }
+        else if (sender is MenuItem && PatientsGrid.SelectedItem is PatientDto selected)
+        {
+            targetPatient = selected;
+        }
+
+        if (targetPatient == null) return;
+
+        try
+        {
+            var full = await _apiClient.GetPatientByIdAsync(targetPatient.Id);
+            var visits = full?.Visits ?? new List<PatientVisitHistoryDto>();
+
+            InvoicesModalPatientSubtitle.Text = $"المريض: {targetPatient.FullName} | كود: {targetPatient.PatientCode} | هاتف: {targetPatient.PhoneNumber}";
+
+            var totalFees = visits.Sum(v => v.TotalFees);
+            var totalPaid = visits.Sum(v => v.DepositAmount);
+            var totalRemaining = Math.Max(0, totalFees - totalPaid);
+
+            InvoicesModalTotalFeesText.Text = $"{totalFees:N2} ج.م";
+            InvoicesModalPaidText.Text = $"{totalPaid:N2} ج.م";
+            InvoicesModalRemainingText.Text = $"{totalRemaining:N2} ج.م";
+
+            PatientInvoicesGrid.ItemsSource = visits;
+            PatientInvoicesModal.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            ClinicMessageBox.Show($"خطأ أثناء جلب فواتير المريض: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ClosePatientInvoicesModal_Click(object sender, RoutedEventArgs e)
+    {
+        PatientInvoicesModal.Visibility = Visibility.Collapsed;
+    }
+
+    // =========================================================
+    // 🖱️ Right-Click ContextMenu Handlers (كليك يمين على المريض)
+    // =========================================================
+
+    private PatientDto? GetSelectedPatientFromGrid()
+    {
+        return PatientsGrid.SelectedItem as PatientDto;
+    }
+
+    private void ContextMenu_AddService_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null) OpenAddPatientServiceModal(patient);
+    }
+
+    private void ContextMenu_OpenPrescription_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null)
+        {
+            var rxDialog = new PrescriptionDialog(_apiClient, patient.Id, patient.FullName, patient.PhoneNumber);
+            rxDialog.Owner = Window.GetWindow(this);
+            rxDialog.ShowDialog();
+        }
+    }
+
+    private void ContextMenu_OpenDentalChart_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null)
+        {
+            var chartWindow = new DentalChartingWindow(_apiClient, patient.Id, patient.FullName);
+            chartWindow.Owner = Window.GetWindow(this);
+            chartWindow.ShowDialog();
+        }
+    }
+
+    private void ContextMenu_OpenVisitsHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null)
+        {
+            var fakeBtn = new Button { DataContext = patient };
+            ViewMedicalRecord_Click(fakeBtn, e);
+        }
+    }
+
+    private void ContextMenu_OpenPatientInvoices_Click(object sender, RoutedEventArgs e)
+    {
+        OpenPatientInvoices_Click(sender, e);
+    }
+
+    private void ContextMenu_OpenMedicalHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null) OpenEditMedicalHistoryModal(patient);
+    }
+
+    private void ContextMenu_OpenWhatsApp_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null)
+        {
+            var fakeBtn = new Button { DataContext = patient };
+            OpenWhatsApp_Click(fakeBtn, e);
+        }
+    }
+
+    private void ContextMenu_DeletePatient_Click(object sender, RoutedEventArgs e)
+    {
+        var patient = GetSelectedPatientFromGrid();
+        if (patient != null)
+        {
+            var fakeBtn = new Button { DataContext = patient };
+            DeletePatient_Click(fakeBtn, e);
+        }
+    }
 }

@@ -52,6 +52,8 @@ public partial class UserManagementView : UserControl
             PermCancelExpenses.IsChecked = true;
             PermAppointments.IsChecked = true;
             PermPatients.IsChecked = true;
+            PermQuickActions.IsChecked = true;
+            PermEditPrescriptions.IsChecked = true;
             PermExport.IsChecked = true;
             PermUsers.IsChecked = true;
         }
@@ -62,6 +64,8 @@ public partial class UserManagementView : UserControl
             PermCancelExpenses.IsChecked = false;
             PermAppointments.IsChecked = true;
             PermPatients.IsChecked = true;
+            PermQuickActions.IsChecked = true;
+            PermEditPrescriptions.IsChecked = false; // افتراضياً للمساعد: عرض وطباعة فقط
             PermExport.IsChecked = false;
             PermUsers.IsChecked = false;
         }
@@ -93,6 +97,8 @@ public partial class UserManagementView : UserControl
             CanCancelExpenses = PermCancelExpenses.IsChecked == true,
             CanManageAppointments = PermAppointments.IsChecked == true,
             CanManagePatients = PermPatients.IsChecked == true,
+            CanUseQuickActions = PermQuickActions.IsChecked == true,
+            CanEditPrescriptions = PermEditPrescriptions.IsChecked == true,
             CanExportReports = PermExport.IsChecked == true,
             CanManageUsers = PermUsers.IsChecked == true
         };
@@ -131,6 +137,8 @@ public partial class UserManagementView : UserControl
             ModalPermFinancials.IsChecked = user.CanViewFinancials;
             ModalPermAppointments.IsChecked = user.CanManageAppointments;
             ModalPermPatients.IsChecked = user.CanManagePatients;
+            ModalPermQuickActions.IsChecked = user.CanUseQuickActions;
+            ModalPermEditPrescriptions.IsChecked = user.CanEditPrescriptions;
             ModalPermExpenses.IsChecked = user.CanManageExpenses;
             ModalPermCancelExpenses.IsChecked = user.CanCancelExpenses;
             ModalPermExport.IsChecked = user.CanExportReports;
@@ -157,6 +165,8 @@ public partial class UserManagementView : UserControl
                 CanViewFinancials = ModalPermFinancials.IsChecked == true,
                 CanManageAppointments = ModalPermAppointments.IsChecked == true,
                 CanManagePatients = ModalPermPatients.IsChecked == true,
+                CanUseQuickActions = ModalPermQuickActions.IsChecked == true,
+                CanEditPrescriptions = ModalPermEditPrescriptions.IsChecked == true,
                 CanManageExpenses = ModalPermExpenses.IsChecked == true,
                 CanCancelExpenses = ModalPermCancelExpenses.IsChecked == true,
                 CanExportReports = ModalPermExport.IsChecked == true,

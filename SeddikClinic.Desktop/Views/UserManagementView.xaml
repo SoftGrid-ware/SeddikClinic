@@ -90,6 +90,8 @@
                             <CheckBox x:Name="PermCancelExpenses" Content="❌ إلغاء المصروفات" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
                             <CheckBox x:Name="PermAppointments" Content="📅 حجز وإدارة المواعيد" IsChecked="True" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
                             <CheckBox x:Name="PermPatients" Content="👥 إدارة سجلات المرضى" IsChecked="True" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
+                            <CheckBox x:Name="PermQuickActions" Content="🖱️ قائمة الكليك يمين والإجراءات المتقدمة" IsChecked="True" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
+                            <CheckBox x:Name="PermEditPrescriptions" Content="💊 كتابة وتعديل الروشتات (للمساعد: عرض وطباعة فقط)" IsChecked="False" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
                             <CheckBox x:Name="PermExport" Content="📑 تصدير Excel والتقارير" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
                             <CheckBox x:Name="PermUsers" Content="🔐 إدارة المستخدمين والصلاحيات" Margin="0,0,20,10" FontWeight="SemiBold" Foreground="#0F172A"/>
                         </WrapPanel>
@@ -315,6 +317,8 @@
                             <CheckBox x:Name="ModalPermFinancials" Content="📊 رؤية الأرباح والمؤشرات المالية والتقارير" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
                             <CheckBox x:Name="ModalPermAppointments" Content="📅 حجز وتعديل وإدارة جدول المواعيد" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
                             <CheckBox x:Name="ModalPermPatients" Content="👥 إدارة سجلات وبيانات وتاريخ المرضى" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
+                            <CheckBox x:Name="ModalPermQuickActions" Content="🖱️ استخدام قائمة الكليك يمين والإجراءات المتقدمة" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
+                            <CheckBox x:Name="ModalPermEditPrescriptions" Content="💊 كتابة وتعديل الروشتات (للمساعد: عرض وطباعة فقط)" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
                             <CheckBox x:Name="ModalPermExpenses" Content="💰 تسجيل وصرف المصروفات" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
                             <CheckBox x:Name="ModalPermCancelExpenses" Content="❌ إلغاء وحذف المصروفات" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>
                             <CheckBox x:Name="ModalPermExport" Content="📑 تصدير الجداول وتقارير Excel" Margin="0,0,0,12" FontWeight="SemiBold" FontSize="13" Foreground="#0F172A"/>

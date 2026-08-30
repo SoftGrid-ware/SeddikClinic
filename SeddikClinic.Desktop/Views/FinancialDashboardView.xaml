@@ -40,8 +40,10 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Export & Print Actions -->
+                <!-- Top Action Buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnDailyShift" Content="🔒 تقفيل شيفت اليوم" Click="OpenDailyShiftModal_Click" Height="40" Background="#D97706" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,0"/>
+                    <Button Content="🤝 أرباح الشركاء" Click="OpenPartnersProfitModal_Click" Height="40" Background="#0284C7" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,0"/>
                     <Button Content="تصدير Excel 📊" Click="ExportExcel_Click" Height="40" Background="#10B981" Foreground="White" FontWeight="SemiBold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,0"/>
                     <Button Content="طباعة تقرير 🖨️" Click="PrintReport_Click" Height="40" Style="{StaticResource OutlineButtonStyle}"/>
                 </StackPanel>
@@ -413,6 +415,51 @@
                     </Border>
                 </Grid>
 
+                <!-- AI Insights & Clinical Practice Performance Card -->
+                <Border Background="#FFFFFF" CornerRadius="16" Padding="22" Margin="0,18,0,0" BorderBrush="#BAE6FD" BorderThickness="1.5" Effect="{StaticResource CardShadow}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Background="#EFF6FF" CornerRadius="10" Padding="8,6" Margin="0,0,10,0">
+                                    <TextBlock Text="🤖" FontSize="18"/>
+                                </Border>
+                                <StackPanel>
+                                    <TextBlock Text="توصيات ومؤشرات الذكاء الاصطناعي السريرية والتشغيلية (AI Dental Practice Insights)" FontSize="15" FontWeight="Bold" Foreground="#0284C7"/>
+                                    <TextBlock Text="تحليل ذكي تلقائي لمعدلات الحضور، أوقات الذروة، والخدمات الأعلى ربحية" FontSize="11.5" Foreground="#64748B" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border Grid.Column="1" Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="8" Padding="10,4">
+                                <TextBlock Text="✅ نشط ومحدث تلقائياً" FontWeight="Bold" FontSize="11" Foreground="#059669"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Summary Banner -->
+                        <Border Grid.Row="1" Background="#F0F9FF" CornerRadius="12" Padding="16,12" Margin="0,0,0,14" BorderBrush="#BAE6FD" BorderThickness="1">
+                            <TextBlock x:Name="AiSummaryText" Text="جاري توليد التقرير الذكي ومؤشرات الأداء السريرية..." FontSize="13" FontWeight="SemiBold" Foreground="#0369A1" LineHeight="20" TextWrapping="Wrap"/>
+                        </Border>
+
+                        <!-- Actionable Bullet Points -->
+                        <StackPanel x:Name="AiRecommendationsContainer" Grid.Row="2">
+                            <Border Background="#F8FAFC" CornerRadius="8" Padding="12,8" BorderBrush="#E2E8F0" BorderThickness="1">
+                                <TextBlock Text="💡 تفعيل التذكير بالواتساب قبل 24 ساعة يساعد في رفع معدل حضور المرضى وتقليل الـ No-Shows." FontSize="12" Foreground="#334155"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
 
@@ -543,6 +590,249 @@
                         <Button Content="إغلاق النافذة ✖" Click="CloseFinancialDetailsModal_Click" Height="40" Padding="24,0" Style="{StaticResource OutlineButtonStyle}"/>
                     </StackPanel>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Modal: نظام إدارة الشركاء وتوزيع الأرباح (Partners Profit Share Modal) -->
+        <Grid x:Name="PartnersProfitModal" Grid.Row="0" Grid.RowSpan="4" Background="#7F000000" Visibility="Collapsed">
+            <Border Background="#FFFFFF" CornerRadius="22" Width="840" MaxHeight="720" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" Effect="{StaticResource CardShadow}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="Auto"/> <!-- Period Net Profit Summary -->
+                        <RowDefinition Height="Auto"/> <!-- Add Partner Row -->
+                        <RowDefinition Height="*"/>    <!-- Partners DataGrid -->
+                        <RowDefinition Height="Auto"/> <!-- Footer -->
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Width="48" Height="48" CornerRadius="14" Background="#EFF6FF" BorderBrush="#BAE6FD" BorderThickness="1" Margin="0,0,14,0" VerticalAlignment="Center">
+                            <TextBlock Text="🤝" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="نظام الشركاء وتوزيع صافي الأرباح" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="احتساب حصص وصافي ربح كل شريك بناءً على أرباح العيادة المحققة خلال الفترة المحددة" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Content="✕" Click="ClosePartnersProfitModal_Click" Width="32" Height="32" Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Cursor="Hand" VerticalAlignment="Top">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style></Button.Resources>
+                        </Button>
+                    </Grid>
+
+                    <!-- Net Profit Summary Card -->
+                    <Border Grid.Row="1" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1.5" CornerRadius="14" Padding="18,12" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="صافي التدفق النقدي الفعلي للعيادة (الفترة المختارة):" FontSize="13" Foreground="#166534" FontWeight="SemiBold"/>
+                                <TextBlock Text="مجموع المقبوضات النقدية الفعلية - المصروفات المسددة - المرتجعات" FontSize="11" Foreground="#15803D" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <TextBlock x:Name="PartnersNetProfitSummaryText" Grid.Column="1" Text="0.00 ج.م" FontSize="22" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Add/Edit Partner Controls -->
+                    <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="اسم الشريك:" FontSize="12" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox x:Name="PartnerNameInput" Height="36" Style="{StaticResource ModernTextBox}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                <TextBlock Text="النسبة المئوية (%):" FontSize="12" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox x:Name="PartnerPercentInput" Text="50" Height="36" Style="{StaticResource ModernTextBox}" FontWeight="Bold" TextAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                                <TextBlock Text="ملاحظات / صفة الشراكة:" FontSize="12" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox x:Name="PartnerNotesInput" Height="36" Style="{StaticResource ModernTextBox}"/>
+                            </StackPanel>
+                            <Button Grid.Column="3" Content="+ إضافة شريك" Click="AddPartner_Click" Height="36" Padding="16,0" Background="#0284C7" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" VerticalAlignment="Bottom"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Partners Grid -->
+                    <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,16" MinHeight="180" MaxHeight="280">
+                        <DataGrid x:Name="PartnersGrid" AutoGenerateColumns="False" CanUserAddRows="False" Background="Transparent" BorderThickness="0" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC" HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" MinRowHeight="44" FontSize="13">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="اسم الشريك" Binding="{Binding Name}" Width="2*" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="النسبة %" Binding="{Binding Percentage, StringFormat='{}{0}%'}" Width="100" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="صافي الربح المستحق (ج.م)" Binding="{Binding CalculatedShare, StringFormat='{}{0:N2} ج.م'}" Width="2*" Foreground="#15803D" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="الملاحظات" Binding="{Binding Notes}" Width="1.5*"/>
+                                <DataGridTemplateColumn Header="إجراء" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="🗑️" Click="DeletePartner_Click" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand" ToolTip="حذف الشريك"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="حفظ إعدادات الشركاء 💾" Click="SavePartnersSettings_Click" Height="42" Padding="26,0" Background="#10B981" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
+                        <Button Content="إغلاق ✕" Click="ClosePartnersProfitModal_Click" Height="42" Style="{StaticResource OutlineButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Modal: تقفيل شيفت وجرد الصندوق اليومي (Daily Shift Closing Modal) -->
+        <Grid x:Name="DailyShiftModal" Grid.Row="0" Grid.RowSpan="4" Background="#7F000000" Visibility="Collapsed">
+            <Border Background="#FFFFFF" CornerRadius="22" Width="860" MaxHeight="750" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" Effect="{StaticResource CardShadow}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> <!-- Header -->
+                            <RowDefinition Height="Auto"/> <!-- Shift Numbers & Calculated Cards -->
+                            <RowDefinition Height="Auto"/> <!-- Denominations Accordion -->
+                            <RowDefinition Height="Auto"/> <!-- Physical Cash Count Input & Status Badge -->
+                            <RowDefinition Height="Auto"/> <!-- Handover Notes -->
+                            <RowDefinition Height="Auto"/> <!-- Action Buttons -->
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Width="48" Height="48" CornerRadius="14" Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" Margin="0,0,14,0" VerticalAlignment="Center">
+                                <TextBlock Text="🔒" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="تقفيل شيفت اليوم وجرد الصندوق النقدي (Shift Settlement)" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock x:Name="ShiftSubtitleText" Text="جرد الخزينة، مطابقة النقدية، وإغلاق الوردية الحالية" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="2" Content="✕" Click="CloseDailyShiftModal_Click" Width="32" Height="32" Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Cursor="Hand" VerticalAlignment="Top">
+                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="10"/></Style></Button.Resources>
+                            </Button>
+                        </Grid>
+
+                        <!-- Shift Financial Numbers -->
+                        <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="14" Padding="16,12" Margin="0,0,0,16" BorderBrush="#E2E8F0" BorderThickness="1">
+                            <UniformGrid Columns="4">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="رصيد فتح الخزينة (قابل للتعديل)" FontSize="11.5" Foreground="#0284C7" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBox x:Name="ShiftOpeningBalanceInput" Text="500.00" Width="130" Height="36" Style="{StaticResource ModernTextBox}" FontWeight="Bold" FontSize="14" Foreground="#0F172A" TextAlignment="Center" Margin="0,4,0,0" TextChanged="ShiftOpeningBalanceInput_TextChanged" ToolTip="يمكنك تعديل رصيد بداية الخزينة وسيعاد احتساب المتوقع تلقائياً"/>
+                                </StackPanel>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="إيرادات كاش محصلة" FontSize="11.5" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="ShiftCashCollectedText" Text="0.00 ج.م" FontSize="15" FontWeight="Bold" Foreground="#15803D" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="مصروفات نقدية مسددة" FontSize="11.5" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="ShiftCashExpensesText" Text="0.00 ج.م" FontSize="15" FontWeight="Bold" Foreground="#DC2626" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="المتوقع بالدرج (السيستم)" FontSize="11.5" Foreground="#0284C7" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="ShiftExpectedCashText" Text="0.00 ج.م" FontSize="16" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </UniformGrid>
+                        </Border>
+
+                        <!-- Denominations Calculator Card -->
+                        <Border Grid.Row="2" Background="#F0F9FF" BorderBrush="#BAE6FD" BorderThickness="1" CornerRadius="14" Padding="14,10" Margin="0,0,0,16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🧮 حاسبة تفقيط فئات النقدية بالدرج (اختياري لتسهيل العد):" FontSize="12.5" FontWeight="Bold" Foreground="#0369A1" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="تصفير الحاسبة 🔄" Click="ResetDenominations_Click" Background="Transparent" Foreground="#0284C7" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold" FontSize="11.5"/>
+                                </Grid>
+                                
+                                <UniformGrid Columns="6">
+                                    <StackPanel Margin="2,0">
+                                        <TextBlock Text="فئة 200 ج" FontSize="11" Foreground="#475569" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="Denom200Input" Text="0" Height="30" TextAlignment="Center" FontWeight="Bold" Style="{StaticResource ModernTextBox}" TextChanged="DenominationInput_TextChanged"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="2,0">
+                                        <TextBlock Text="فئة 100 ج" FontSize="11" Foreground="#475569" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="Denom100Input" Text="0" Height="30" TextAlignment="Center" FontWeight="Bold" Style="{StaticResource ModernTextBox}" TextChanged="DenominationInput_TextChanged"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="2,0">
+                                        <TextBlock Text="فئة 50 ج" FontSize="11" Foreground="#475569" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="Denom50Input" Text="0" Height="30" TextAlignment="Center" FontWeight="Bold" Style="{StaticResource ModernTextBox}" TextChanged="DenominationInput_TextChanged"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="2,0">
+                                        <TextBlock Text="فئة 20 ج" FontSize="11" Foreground="#475569" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="Denom20Input" Text="0" Height="30" TextAlignment="Center" FontWeight="Bold" Style="{StaticResource ModernTextBox}" TextChanged="DenominationInput_TextChanged"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="2,0">
+                                        <TextBlock Text="فئة 10 ج" FontSize="11" Foreground="#475569" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="Denom10Input" Text="0" Height="30" TextAlignment="Center" FontWeight="Bold" Style="{StaticResource ModernTextBox}" TextChanged="DenominationInput_TextChanged"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="2,0">
+                                        <TextBlock Text="فئة 5 ج فما دون" FontSize="11" Foreground="#475569" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="Denom5Input" Text="0" Height="30" TextAlignment="Center" FontWeight="Bold" Style="{StaticResource ModernTextBox}" TextChanged="DenominationInput_TextChanged"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Physical Cash Count & Difference Status -->
+                        <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="14" Padding="16,12" Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                    <TextBlock Text="💵 إجمالي النقدية الفعلية الموجودة بالدرج (الجرد الفعلي):" FontSize="13" Foreground="#0F172A" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBox x:Name="ActualCashDrawerInput" Height="42" Style="{StaticResource ModernTextBox}" FontWeight="Bold" FontSize="16" Foreground="#0F172A" TextChanged="ActualCashDrawerInput_TextChanged"/>
+                                </StackPanel>
+
+                                <Border x:Name="ShiftDifferenceBadge" Grid.Column="1" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1.5" CornerRadius="12" Padding="14,10" VerticalAlignment="Center">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock x:Name="ShiftDifferenceBadgeStatus" Text="✅ الصندوق متطابق بالكامل" FontWeight="Bold" FontSize="13.5" Foreground="#15803D" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="ShiftDifferenceAmountText" Text="فارق 0.00 ج.م" FontSize="12" Foreground="#166534" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Handover Notes -->
+                        <UniformGrid Grid.Row="4" Columns="2" Margin="0,0,0,18">
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="مستلم الشيفت / الوردية القادمة:" FontSize="12.5" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBox x:Name="HandedOverToInput" Height="38" Style="{StaticResource ModernTextBox}"/>
+                            </StackPanel>
+                            <StackPanel Margin="10,0,0,0">
+                                <TextBlock Text="ملاحظات وتفاصيل التقفيل:" FontSize="12.5" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBox x:Name="ShiftClosingNotesInput" Height="38" Style="{StaticResource ModernTextBox}"/>
+                            </StackPanel>
+                        </UniformGrid>
+
+                        <!-- Action Buttons -->
+                        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button Content="تأكيد إغلاق الوردية 🔒" Click="ConfirmCloseDailyShift_Click" Height="42" Padding="28,0" Background="#DC2626" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
+                            <Button Content="طباعة محضر تقفيل الوردية 🖨️" Click="PrintShiftReceipt_Click" Height="42" Padding="20,0" Background="#0284C7" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
+                            <Button Content="إلغاء ✖" Click="CloseDailyShiftModal_Click" Height="42" Style="{StaticResource OutlineButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
             </Border>
         </Grid>
     </Grid>

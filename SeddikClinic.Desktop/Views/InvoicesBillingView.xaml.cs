@@ -48,15 +48,6 @@ public partial class InvoicesBillingView : UserControl
         var baseQuery = _allAppointments
             .Where(a => a.Status != Core.Enums.AppointmentStatus.Cancelled);
 
-        // عرض حالات التقسيط الحقيقية فقط:
-        // = حجوزات دفع فيها عربون أقل من الإجمالي (أي فيها متبقي للتحصيل)
-        // إلا لو اختار "عرض كافة الحجوزات"
-        if (statusIndex != 3)
-        {
-            baseQuery = baseQuery.Where(a =>
-                a.DepositAmount > 0 && a.DepositAmount < a.TotalFees);
-        }
-
         var list = baseQuery.Select(a => new InvoiceItemViewModel
         {
             AppointmentId = a.Id,
@@ -70,6 +61,24 @@ public partial class InvoicesBillingView : UserControl
             IsDepositPaid = a.IsDepositPaid
         }).ToList();
 
+        // Status filter:
+        // 0: كافة الفواتير والتحصيلات (الكل)
+        // 1: حالات التقسيط والذمم الجارية ⏳
+        // 2: فواتير مسددة بالكامل ✅
+        // 3: فواتير غير مسددة بالكامل ❌
+        if (statusIndex == 1) // متبقي أقساط وذمم جارية
+        {
+            list = list.Where(i => !i.IsFullyPaid).ToList();
+        }
+        else if (statusIndex == 2) // فواتير مسددة بالكامل
+        {
+            list = list.Where(i => i.IsFullyPaid).ToList();
+        }
+        else if (statusIndex == 3) // غير مسددة
+        {
+            list = list.Where(i => i.IsZeroPaid).ToList();
+        }
+
         // Search filter
         var search = SearchBox.Text?.Trim().ToLower() ?? "";
         if (!string.IsNullOrEmpty(search))
@@ -80,16 +89,6 @@ public partial class InvoicesBillingView : UserControl
                 i.AppointmentNumber.ToLower().Contains(search) ||
                 i.ServiceType.ToLower().Contains(search)
             ).ToList();
-        }
-
-        // Status filter
-        if (statusIndex == 1) // متبقي أقساط وذمم جارية
-        {
-            list = list.Where(i => !i.IsFullyPaid).ToList();
-        }
-        else if (statusIndex == 2) // أقساط مسددة بالكامل
-        {
-            list = list.Where(i => i.IsFullyPaid).ToList();
         }
 
         _displayedInvoices = list.OrderByDescending(i => i.AppointmentDate).ToList();
@@ -103,7 +102,7 @@ public partial class InvoicesBillingView : UserControl
         KpiCollectedText.Text = $"{totalCollected:N2} ج.م";
         KpiUncollectedText.Text = $"{totalUncollected:N2} ج.م";
         KpiDownPaymentsText.Text = $"{downPayments:N2} ج.م";
-        KpiInvoicesCountText.Text = $"{list.Count} حالة تقسيط";
+        KpiInvoicesCountText.Text = $"{list.Count} فاتورة";
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -177,32 +176,108 @@ public partial class InvoicesBillingView : UserControl
         _selectedInvoiceForPayment = null;
     }
 
+    private void ZeroCollection_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedInvoiceForPayment == null) return;
+        ModalPaymentAmountInput.Text = "0";
+        SetDirectCollectionCheck.IsChecked = true;
+        ModalPaidAmountText.Text = "0.00 ج.م";
+        ModalRemainingText.Text = $"{_selectedInvoiceForPayment.TotalFees:N2} ج.م";
+    }
+
+    private void FullPayment_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedInvoiceForPayment == null) return;
+        ModalPaymentAmountInput.Text = _selectedInvoiceForPayment.RemainingAmount.ToString("0.00");
+        SetDirectCollectionCheck.IsChecked = false;
+    }
+
+    private void ModalPaymentAmountInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_selectedInvoiceForPayment == null) return;
+
+        if (decimal.TryParse(ModalPaymentAmountInput.Text.Trim(), out var amount))
+        {
+            if (SetDirectCollectionCheck.IsChecked == true || amount == 0)
+            {
+                var newPaid = Math.Max(0, amount);
+                var newRem = Math.Max(0, _selectedInvoiceForPayment.TotalFees - newPaid);
+                ModalPaidAmountText.Text = $"{newPaid:N2} ج.م";
+                ModalRemainingText.Text = $"{newRem:N2} ج.م";
+            }
+            else
+            {
+                var newPaid = _selectedInvoiceForPayment.DepositAmount + amount;
+                var newRem = Math.Max(0, _selectedInvoiceForPayment.TotalFees - newPaid);
+                ModalPaidAmountText.Text = $"{newPaid:N2} ج.م";
+                ModalRemainingText.Text = $"{newRem:N2} ج.م";
+            }
+        }
+    }
+
     private async void ConfirmCollectPayment_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedInvoiceForPayment == null) return;
 
-        if (!decimal.TryParse(ModalPaymentAmountInput.Text.Trim(), out var amount) || amount <= 0)
+        if (!decimal.TryParse(ModalPaymentAmountInput.Text.Trim(), out var amount) || amount < 0)
         {
-            ClinicMessageBox.Show("يرجى إدخال مبلغ صحيح أكبر من الصفر.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ClinicMessageBox.Show("يرجى إدخال مبلغ صحيح (0 أو أكبر).", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
+        var isSetDirectTotal = SetDirectCollectionCheck.IsChecked == true || amount == 0;
         var method = (ModalPaymentMethodCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "نقداً";
         var notes = ModalNotesInput.Text.Trim();
 
         try
         {
-            var success = await _apiClient.PayInstallmentAsync(_selectedInvoiceForPayment.AppointmentId, amount, method, notes);
-            if (success)
+            if (isSetDirectTotal || amount == 0)
             {
-                ClinicMessageBox.Show($"تم تحصيل وتسجيل دفعة بقيمة {amount:N2} ج.م للمريض '{_selectedInvoiceForPayment.PatientName}' بنجاح!", "نجاح التحصيل", MessageBoxButton.OK, MessageBoxImage.Information);
-                CollectPaymentModal.Visibility = Visibility.Collapsed;
-                _selectedInvoiceForPayment = null;
-                await LoadInvoicesAsync();
+                // تعديل إجمالي المبلغ المحصل مباشرة إلى القيمة المحددة (سواء 0 أو أي رقم)
+                var newCollected = amount;
+                var totalFees = _selectedInvoiceForPayment.TotalFees;
+                var isPaidFull = (newCollected >= totalFees && totalFees > 0);
+
+                var success = await _apiClient.UpdateAppointmentFinancialsAsync(
+                    _selectedInvoiceForPayment.AppointmentId,
+                    totalFees,
+                    newCollected,
+                    isPaidFull);
+
+                if (success)
+                {
+                    ClinicMessageBox.Show(
+                        amount == 0
+                            ? $"تم تصفير المبلغ المحصل (0.00 ج.م) للمريض '{_selectedInvoiceForPayment.PatientName}' وأصبح المتبقي ({totalFees:N2} ج.م) بنجاح! 🔄"
+                            : $"تم تعديل إجمالي المحصل إلى ({newCollected:N2} ج.م) للمريض '{_selectedInvoiceForPayment.PatientName}' وتحديث المتبقي إلى ({Math.Max(0, totalFees - newCollected):N2} ج.م) بنجاح! ✅",
+                        "تم تحديث التحصيل",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    CollectPaymentModal.Visibility = Visibility.Collapsed;
+                    _selectedInvoiceForPayment = null;
+                    await LoadInvoicesAsync();
+                }
+                else
+                {
+                    ClinicMessageBox.Show("تعذر تعديل البيانات المالية للموعد.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
             else
             {
-                ClinicMessageBox.Show("تعذر تسجيل التحصيل.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                // تحصيل وسداد دفعة إضافية
+                var success = await _apiClient.PayInstallmentAsync(_selectedInvoiceForPayment.AppointmentId, amount, method, notes);
+                if (success)
+                {
+                    ClinicMessageBox.Show($"تم تحصيل وتسجيل دفعة بقيمة {amount:N2} ج.م للمريض '{_selectedInvoiceForPayment.PatientName}' بنجاح! ✅", "نجاح التحصيل", MessageBoxButton.OK, MessageBoxImage.Information);
+                    CollectPaymentModal.Visibility = Visibility.Collapsed;
+                    _selectedInvoiceForPayment = null;
+                    await LoadInvoicesAsync();
+                }
+                else
+                {
+                    ClinicMessageBox.Show("تعذر تسجيل التحصيل.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
         catch (Exception ex)
@@ -253,8 +328,8 @@ public class InvoiceItemViewModel
     public bool IsZeroPaid => DepositAmount == 0;
     public string PaymentStatusText =>
         IsFullyPaid
-            ? "مسددة بالكامل ✅"
+            ? "مسددة بالكامل (كاش) ✅"
             : DepositAmount > 0
-                ? $"عربون {DepositAmount:N0} ج.م | متبقي {RemainingAmount:N0} ج.م ⏳"
-                : "غير مسددة ❌";
+                ? $"تقسيط | مسدد {DepositAmount:N0} | متبقي {RemainingAmount:N0} ج.م ⏳"
+                : $"غير مسددة | متبقي {RemainingAmount:N0} ج.م ❌";
 }

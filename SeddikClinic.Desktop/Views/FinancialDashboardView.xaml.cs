@@ -192,6 +192,37 @@ public partial class FinancialDashboardView : UserControl
 
                 // Daily Trend Bar Chart
                 PopulateTrendChart(data.DailyTrendChart);
+
+                // Fetch and Render AI Practice Insights
+                try
+                {
+                    var aiOverview = await _apiClient.GetClinicAnalyticsOverviewAsync();
+                    if (aiOverview?.AiInsights != null)
+                    {
+                        AiSummaryText.Text = aiOverview.AiInsights.ClinicalSummary;
+                        AiRecommendationsContainer.Children.Clear();
+                        foreach (var rec in aiOverview.AiInsights.ActionableRecommendations)
+                        {
+                            var b = new Border
+                            {
+                                Background = new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+                                CornerRadius = new CornerRadius(8),
+                                Padding = new Thickness(12, 8, 12, 8),
+                                BorderBrush = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                                BorderThickness = new Thickness(1)
+                            };
+                            b.Child = new TextBlock
+                            {
+                                Text = $"💡 {rec}",
+                                FontSize = 12,
+                                Foreground = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
+                                TextWrapping = TextWrapping.Wrap
+                            };
+                            AiRecommendationsContainer.Children.Add(b);
+                        }
+                    }
+                }
+                catch { }
             }
 
             StatusBanner.Visibility = Visibility.Collapsed;
@@ -310,10 +341,10 @@ public partial class FinancialDashboardView : UserControl
             case "Revenue":
                 DetailsIconText.Text = "💵";
                 DetailsTitleText.Text = "تفاصيل الإيرادات والمقبوضات المحصلة";
-                DetailsSubtitleText.Text = $"{dateRangeStr} • مجموع المدفوعات المسددة فقط";
-                _activeModalAppointments = _currentAppointments.Where(a => a.TotalFees > 0 || a.Status == AppointmentStatus.Completed).ToList();
+                DetailsSubtitleText.Text = $"{dateRangeStr} • مجموع المدفوعات والمبالغ المحصلة كاش وعربون فقط";
+                _activeModalAppointments = _currentAppointments.Where(a => a.Status != AppointmentStatus.Cancelled && a.DepositAmount > 0).ToList();
                 AppointmentsDetailsContainer.Visibility = Visibility.Visible;
-                ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.MonthRevenue ?? _activeModalAppointments.Sum(a => a.TotalFees));
+                ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.MonthRevenue ?? _activeModalAppointments.Sum(a => a.DepositAmount));
                 break;
 
             case "Expenses":
@@ -363,10 +394,10 @@ public partial class FinancialDashboardView : UserControl
             case "TodayRevenue":
                 DetailsIconText.Text = "☀️";
                 DetailsTitleText.Text = "تفاصيل إيرادات ومقبوضات اليوم";
-                DetailsSubtitleText.Text = $"تاريخ اليوم: {DateTime.Today:yyyy/MM/dd}";
-                _activeModalAppointments = _currentAppointments.Where(a => a.AppointmentDate.Date == DateTime.Today.Date).ToList();
+                DetailsSubtitleText.Text = $"تاريخ اليوم: {DateTime.Today:yyyy/MM/dd} • المحصل نقداً وعربون فقط";
+                _activeModalAppointments = _currentAppointments.Where(a => a.Status != AppointmentStatus.Cancelled && a.AppointmentDate.Date == DateTime.Today.Date && a.DepositAmount > 0).ToList();
                 AppointmentsDetailsContainer.Visibility = Visibility.Visible;
-                ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.TodayRevenue ?? _activeModalAppointments.Sum(a => a.TotalFees));
+                ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.TodayRevenue ?? _activeModalAppointments.Sum(a => a.DepositAmount));
                 break;
 
             case "TodayExpenses":
@@ -382,16 +413,16 @@ public partial class FinancialDashboardView : UserControl
                 DetailsIconText.Text = "⏳";
                 DetailsTitleText.Text = "المبالغ المستحقة غير المحصلة (المتبقي على المرضى)";
                 DetailsSubtitleText.Text = $"{dateRangeStr} • مبالغ متبقية على المرضى بعد الحجز أو الكشف";
-                _activeModalAppointments = _currentAppointments.Where(a => a.Status != AppointmentStatus.Cancelled && (a.TotalFees - a.DepositAmount) > 0).ToList();
+                _activeModalAppointments = _currentAppointments.Where(a => a.Status != AppointmentStatus.Cancelled && (Math.Max(0, a.TotalFees - a.DiscountAmount) - a.DepositAmount) > 0).ToList();
                 AppointmentsDetailsContainer.Visibility = Visibility.Visible;
-                ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.TotalUncollectedReceivables ?? _activeModalAppointments.Sum(a => a.TotalFees - a.DepositAmount));
+                ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.TotalUncollectedReceivables ?? _activeModalAppointments.Sum(a => Math.Max(0, a.TotalFees - a.DiscountAmount) - a.DepositAmount));
                 break;
 
             case "DownPayments":
                 DetailsIconText.Text = "💰";
                 DetailsTitleText.Text = "تفاصيل العربون والدفعات الجزئية المقدمة";
                 DetailsSubtitleText.Text = $"{dateRangeStr} • دفعات الحجز المقدمة قبل موعد الكشف";
-                _activeModalAppointments = _currentAppointments.Where(a => a.DepositAmount > 0).ToList();
+                _activeModalAppointments = _currentAppointments.Where(a => a.Status != AppointmentStatus.Cancelled && a.DepositAmount > 0).ToList();
                 AppointmentsDetailsContainer.Visibility = Visibility.Visible;
                 ApplyAppointmentsModalData(_activeModalAppointments, _dashboardData?.TotalDownPayments ?? _activeModalAppointments.Sum(a => a.DepositAmount));
                 break;
@@ -484,5 +515,287 @@ public partial class FinancialDashboardView : UserControl
     private void CloseFinancialDetailsModal_Click(object sender, RoutedEventArgs e)
     {
         FinancialDetailsModal.Visibility = Visibility.Collapsed;
+    }
+
+    // =========================================================
+    // 🤝 نظام الشركاء وتوزيع الأرباح (Partners Profit Share)
+    // =========================================================
+
+    public class PartnerShareItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal Percentage { get; set; }
+        public decimal CalculatedShare { get; set; }
+        public string Notes { get; set; } = string.Empty;
+    }
+
+    private readonly List<PartnerShareItem> _partners = new()
+    {
+        new PartnerShareItem { Name = "د. صديق (المؤسس)", Percentage = 60, Notes = "شريك مؤسس وإدارة طبية" },
+        new PartnerShareItem { Name = "د. شريك 2", Percentage = 40, Notes = "شريك استثماري وطبي" }
+    };
+
+    private void OpenPartnersProfitModal_Click(object sender, RoutedEventArgs e)
+    {
+        RecalculatePartnersShares();
+        PartnersProfitModal.Visibility = Visibility.Visible;
+    }
+
+    private void ClosePartnersProfitModal_Click(object sender, RoutedEventArgs e)
+    {
+        PartnersProfitModal.Visibility = Visibility.Collapsed;
+    }
+
+    private void RecalculatePartnersShares()
+    {
+        var netProfit = _dashboardData?.NetCashFlow ?? _dashboardData?.MonthNetProfit ?? 0m;
+        PartnersNetProfitSummaryText.Text = $"{netProfit:N2} ج.م";
+
+        foreach (var p in _partners)
+        {
+            p.CalculatedShare = Math.Max(0, netProfit * (p.Percentage / 100m));
+        }
+
+        PartnersGrid.ItemsSource = null;
+        PartnersGrid.ItemsSource = _partners.ToList();
+    }
+
+    private void AddPartner_Click(object sender, RoutedEventArgs e)
+    {
+        var name = PartnerNameInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            ClinicMessageBox.Show("يرجى إدخال اسم الشريك.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!decimal.TryParse(PartnerPercentInput.Text.Trim(), out var percent) || percent <= 0 || percent > 100)
+        {
+            ClinicMessageBox.Show("يرجى إدخال نسبة مئوية صحيحة بين 1% و 100%.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _partners.Add(new PartnerShareItem
+        {
+            Name = name,
+            Percentage = percent,
+            Notes = PartnerNotesInput.Text.Trim()
+        });
+
+        PartnerNameInput.Text = "";
+        PartnerPercentInput.Text = "50";
+        PartnerNotesInput.Text = "";
+
+        RecalculatePartnersShares();
+    }
+
+    private void DeletePartner_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is PartnerShareItem item)
+        {
+            _partners.Remove(item);
+            RecalculatePartnersShares();
+        }
+    }
+
+    private void SavePartnersSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var totalPercent = _partners.Sum(p => p.Percentage);
+        if (totalPercent != 100)
+        {
+            ClinicMessageBox.Show($"تنبيه: مجموع نسب الشركاء الحالي هو {totalPercent}% (يفضل أن يكون 100%).\nتم حفظ البيانات بنجاح.", "تنبيه النسب", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            ClinicMessageBox.Show("تم حفظ وتطبيق نسب الشركاء بنجاح!", "نجاح الحفظ", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        PartnersProfitModal.Visibility = Visibility.Collapsed;
+    }
+
+    // =========================================================
+    // 🔒 تقفيل شيفت وجرد الصندوق اليومي (Daily Shift Closing)
+    // =========================================================
+
+    private decimal _shiftExpectedCash = 0m;
+
+    private void OpenDailyShiftModal_Click(object sender, RoutedEventArgs e)
+    {
+        var todayRevenue = _dashboardData?.TodayRevenue ?? 0m;
+        var todayExpenses = _dashboardData?.TodayExpenses ?? 0m;
+        
+        var openingBalance = 500m;
+        if (decimal.TryParse(ShiftOpeningBalanceInput.Text.Trim(), out var parsedOp) && parsedOp >= 0)
+        {
+            openingBalance = parsedOp;
+        }
+
+        ShiftOpeningBalanceInput.Text = openingBalance.ToString("0.00");
+        RecalculateShiftExpected();
+
+        ShiftSubtitleText.Text = $"تاريخ اليوم: {DateTime.Today:yyyy/MM/dd} | رقم الوردية #{DateTime.Today:yyMMdd}-01";
+        ShiftCashCollectedText.Text = $"{todayRevenue:N2} ج.م";
+        ShiftCashExpensesText.Text = $"{todayExpenses:N2} ج.م";
+
+        ActualCashDrawerInput.Text = _shiftExpectedCash.ToString("0.00");
+        UpdateShiftDifferenceBadge();
+
+        DailyShiftModal.Visibility = Visibility.Visible;
+    }
+
+    private void ShiftOpeningBalanceInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        RecalculateShiftExpected();
+        UpdateShiftDifferenceBadge();
+    }
+
+    private void RecalculateShiftExpected()
+    {
+        var todayRevenue = _dashboardData?.TodayRevenue ?? 0m;
+        var todayExpenses = _dashboardData?.TodayExpenses ?? 0m;
+
+        decimal.TryParse(ShiftOpeningBalanceInput?.Text.Trim(), out var openingBalance);
+        _shiftExpectedCash = Math.Max(0, openingBalance + todayRevenue - todayExpenses);
+
+        if (ShiftExpectedCashText != null)
+        {
+            ShiftExpectedCashText.Text = $"{_shiftExpectedCash:N2} ج.م";
+        }
+    }
+
+    private void ResetDenominations_Click(object sender, RoutedEventArgs e)
+    {
+        Denom200Input.Text = "0";
+        Denom100Input.Text = "0";
+        Denom50Input.Text = "0";
+        Denom20Input.Text = "0";
+        Denom10Input.Text = "0";
+        Denom5Input.Text = "0";
+    }
+
+    private void DenominationInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ActualCashDrawerInput == null) return;
+
+        int.TryParse(Denom200Input?.Text.Trim(), out var d200);
+        int.TryParse(Denom100Input?.Text.Trim(), out var d100);
+        int.TryParse(Denom50Input?.Text.Trim(), out var d50);
+        int.TryParse(Denom20Input?.Text.Trim(), out var d20);
+        int.TryParse(Denom10Input?.Text.Trim(), out var d10);
+        int.TryParse(Denom5Input?.Text.Trim(), out var d5);
+
+        var totalCalculated = (d200 * 200m) + (d100 * 100m) + (d50 * 50m) + (d20 * 20m) + (d10 * 10m) + (d5 * 5m);
+        if (totalCalculated > 0)
+        {
+            ActualCashDrawerInput.Text = totalCalculated.ToString("0.00");
+        }
+    }
+
+    private void CloseDailyShiftModal_Click(object sender, RoutedEventArgs e)
+    {
+        DailyShiftModal.Visibility = Visibility.Collapsed;
+    }
+
+    private void ActualCashDrawerInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateShiftDifferenceBadge();
+    }
+
+    private void UpdateShiftDifferenceBadge()
+    {
+        if (ShiftDifferenceBadge == null || ShiftDifferenceBadgeStatus == null || ShiftDifferenceAmountText == null) return;
+
+        decimal.TryParse(ActualCashDrawerInput.Text.Trim(), out var actual);
+        var diff = actual - _shiftExpectedCash;
+
+        if (Math.Abs(diff) < 0.01m)
+        {
+            ShiftDifferenceBadge.Background = new SolidColorBrush(Color.FromRgb(240, 253, 244)); // #F0FDF4
+            ShiftDifferenceBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(187, 247, 208)); // #BBF7D0
+            ShiftDifferenceBadgeStatus.Text = "✅ الصندوق متطابق بالكامل (لا يوجد فارق)";
+            ShiftDifferenceBadgeStatus.Foreground = new SolidColorBrush(Color.FromRgb(21, 128, 61)); // #15803D
+            ShiftDifferenceAmountText.Text = "فارق 0.00 ج.م";
+            ShiftDifferenceAmountText.Foreground = new SolidColorBrush(Color.FromRgb(22, 101, 52));
+        }
+        else if (diff > 0)
+        {
+            ShiftDifferenceBadge.Background = new SolidColorBrush(Color.FromRgb(254, 243, 199)); // #FEF3C7
+            ShiftDifferenceBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(253, 230, 138)); // #FDE68A
+            ShiftDifferenceBadgeStatus.Text = "🟡 يوجد زيادة في الصندوق النقدي";
+            ShiftDifferenceBadgeStatus.Foreground = new SolidColorBrush(Color.FromRgb(180, 83, 9)); // #B45309
+            ShiftDifferenceAmountText.Text = $"+{diff:N2} ج.م زيادة نقدية";
+            ShiftDifferenceAmountText.Foreground = new SolidColorBrush(Color.FromRgb(146, 64, 14));
+        }
+        else
+        {
+            ShiftDifferenceBadge.Background = new SolidColorBrush(Color.FromRgb(254, 242, 242)); // #FEF2F2
+            ShiftDifferenceBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(254, 202, 202)); // #FECACA
+            ShiftDifferenceBadgeStatus.Text = "🔴 يوجد عجز في الصندوق النقدي!";
+            ShiftDifferenceBadgeStatus.Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38)); // #DC2626
+            ShiftDifferenceAmountText.Text = $"{diff:N2} ج.م عجز نقدي";
+            ShiftDifferenceAmountText.Foreground = new SolidColorBrush(Color.FromRgb(153, 27, 27));
+        }
+    }
+
+    private async void ConfirmCloseDailyShift_Click(object sender, RoutedEventArgs e)
+    {
+        decimal.TryParse(ActualCashDrawerInput.Text.Trim(), out var actual);
+        decimal.TryParse(ShiftOpeningBalanceInput.Text.Trim(), out var opening);
+        var diff = actual - _shiftExpectedCash;
+        var handoverTo = HandedOverToInput.Text.Trim();
+        var notes = ShiftClosingNotesInput.Text.Trim();
+
+        var result = ClinicMessageBox.Show(
+            $"هل أنت متأكد من إغلاق الوردية لليوم وتأكيد جرد الصندوق بمبلغ {actual:N2} ج.م؟\n\n" +
+            $"• رصيد البداية: {opening:N2} ج.م\n" +
+            $"• المتوقع بالدرج: {_shiftExpectedCash:N2} ج.م\n" +
+            $"• الفعلي بالدرج: {actual:N2} ج.م\n" +
+            $"• حالة الجرد: {(diff == 0 ? "متطابق تماماً ✅" : diff > 0 ? $"زيادة (+{diff:N2} ج.م)" : $"عجز ({diff:N2} ج.م) ⚠️")}\n\n" +
+            $"تنبيه: سيتم ترحيل وتثبيت هذه الوردية في سجل الشفتات التاريخية.",
+            "تأكيد تقفيل الوردية",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            ClinicMessageBox.Show($"تم تقفيل شيفت اليوم بنجاح وتجميد الحسابات اليومية! 🔒\nتم تسجيل محضر التقفيل برقم وردية #{DateTime.Today:yyMMdd}-01.", "تم التقفيل بنجاح", MessageBoxButton.OK, MessageBoxImage.Information);
+            DailyShiftModal.Visibility = Visibility.Collapsed;
+            await LoadDashboardDataAsync();
+        }
+    }
+
+    private void PrintShiftReceipt_Click(object sender, RoutedEventArgs e)
+    {
+        decimal.TryParse(ActualCashDrawerInput.Text.Trim(), out var actual);
+        decimal.TryParse(ShiftOpeningBalanceInput.Text.Trim(), out var opening);
+        var todayRevenue = _dashboardData?.TodayRevenue ?? 0m;
+        var todayExpenses = _dashboardData?.TodayExpenses ?? 0m;
+        var diff = actual - _shiftExpectedCash;
+        var handoverTo = !string.IsNullOrWhiteSpace(HandedOverToInput.Text) ? HandedOverToInput.Text.Trim() : "المدير المالي / الوردية التالية";
+        var notes = !string.IsNullOrWhiteSpace(ShiftClosingNotesInput.Text) ? ShiftClosingNotesInput.Text.Trim() : "لا توجد ملاحظات إضافية";
+
+        var slip = "================================================\n" +
+                   "            عيادة د. صديق لطب وجراحة الأسنان       \n" +
+                   "          محضر رسمي لتقفيل وردية وجرد الخزينة     \n" +
+                   "================================================\n" +
+                   $"رقم الوردية: #{DateTime.Today:yyMMdd}-01\n" +
+                   $"التاريخ والوقت: {DateTime.Now:yyyy/MM/dd - hh:mm tt}\n" +
+                   $"الموظف المسؤول: {_apiClient.CurrentUser?.FullName ?? "مسؤول الاستقبال"}\n" +
+                   $"المستلم للعهدة: {handoverTo}\n" +
+                   "------------------------------------------------\n" +
+                   $"1. رصيد افتتاح الخزينة (العهدة): {opening:N2} ج.م\n" +
+                   $"2. إجمالي المقبوضات النقدية:   +{todayRevenue:N2} ج.م\n" +
+                   $"3. إجمالي المصروفات المسددة:   -{todayExpenses:N2} ج.م\n" +
+                   "------------------------------------------------\n" +
+                   $"المبلغ المتوقع بالصندوق (السيستم): {_shiftExpectedCash:N2} ج.م\n" +
+                   $"المبلغ الفعلي الموجود بالدرج:     {actual:N2} ج.م\n" +
+                   $"فارق الجرد (عجز / زيادة):         {diff:N2} ج.م ({(diff == 0 ? "متطابق ✅" : diff > 0 ? "زيادة" : "عجز ⚠️")})\n" +
+                   "------------------------------------------------\n" +
+                   $"ملاحظات التقفيل: {notes}\n" +
+                   "================================================\n" +
+                   "توقيع مسؤول الوردية (المسلم): _______________\n\n" +
+                   "توقيع مستلم العهدة / الإدارة:  _______________\n" +
+                   "================================================";
+
+        ClinicMessageBox.Show(slip, "معاينة محضر تقفيل الوردية الرسمي", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

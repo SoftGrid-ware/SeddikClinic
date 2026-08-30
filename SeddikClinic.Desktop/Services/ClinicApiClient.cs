@@ -35,47 +35,131 @@ public class ClinicApiClient
     public UserDto? CurrentUser { get; private set; }
     public string? CurrentToken { get; private set; }
 
+    public event EventHandler<string>? ServerUrlChanged;
+
     public ClinicApiClient()
     {
         _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(10)
         };
+
+        LoadSavedServerUrl();
+    }
+
+    private string GetConfigFilePath()
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folder = Path.Combine(appData, "SeddikClinic");
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            return Path.Combine(folder, "server_config.json");
+        }
+        catch
+        {
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "server_config.json");
+        }
+    }
+
+    private void LoadSavedServerUrl()
+    {
+        try
+        {
+            var path = GetConfigFilePath();
+            if (File.Exists(path))
+            {
+                var content = File.ReadAllText(path).Trim();
+                if (!string.IsNullOrWhiteSpace(content) && Uri.TryCreate(content, UriKind.Absolute, out _))
+                {
+                    _activeBaseUrl = content.TrimEnd('/');
+                }
+            }
+        }
+        catch
+        {
+            // ignore fallback
+        }
+    }
+
+    public void SaveServerUrl(string url)
+    {
+        try
+        {
+            var cleanUrl = url.Trim().TrimEnd('/');
+            _activeBaseUrl = cleanUrl;
+            var path = GetConfigFilePath();
+            File.WriteAllText(path, cleanUrl);
+            ServerUrlChanged?.Invoke(this, cleanUrl);
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    public async Task<(bool IsOnline, long LatencyMs, string Message)> PingServerAsync(string? targetUrl = null)
+    {
+        var url = string.IsNullOrWhiteSpace(targetUrl) ? _activeBaseUrl : targetUrl.Trim().TrimEnd('/');
+        var sw = Stopwatch.StartNew();
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var res = await _httpClient.GetAsync($"{url}/liveness", cts.Token);
+            sw.Stop();
+
+            if (res.IsSuccessStatusCode)
+            {
+                return (true, sw.ElapsedMilliseconds, $"متصل بنجاح (زمن الاستجابة: {sw.ElapsedMilliseconds} ms)");
+            }
+            else
+            {
+                return (false, sw.ElapsedMilliseconds, $"السيرفر استجاب برمز خطأ: {(int)res.StatusCode} {res.ReasonPhrase}");
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            sw.Stop();
+            return (false, sw.ElapsedMilliseconds, "انتهت مهلة الاتصال (Timeout) - السيرفر لا يستجيب.");
+        }
+        catch (HttpRequestException ex)
+        {
+            sw.Stop();
+            return (false, sw.ElapsedMilliseconds, $"تعذر الوصول للسيرفر: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            return (false, sw.ElapsedMilliseconds, $"خطأ في الاتصال: {ex.Message}");
+        }
     }
 
     public async Task<bool> IsServerRespondingAsync(string url)
     {
-        try
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            var res = await _httpClient.GetAsync($"{url}/liveness", cts.Token);
-            return res.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
+        var result = await PingServerAsync(url);
+        return result.IsOnline;
     }
 
     public async Task<bool> EnsureServerRunningAsync()
     {
-        // 1. فحص إذا كان السيرفر يعمل بالفعل
+        // 1. فحص إذا كان السيرفر المحفوظ أو الحالي يعمل بالفعل
         if (await IsServerRespondingAsync(_activeBaseUrl))
         {
             return true;
         }
 
-        // 2. فحص الروابط الأخرى
+        // 2. فحص الروابط الافتراضية الأخرى
         foreach (var endpoint in _endpoints)
         {
             if (await IsServerRespondingAsync(endpoint))
             {
-                _activeBaseUrl = endpoint;
+                SaveServerUrl(endpoint);
                 return true;
             }
         }
 
-        // 3. إذا لم يكن السيرفر يعمل، يتم تشغيله تلقائياً في الخلفية بدون أي نوافذ سوداء!
+        // 3. إذا لم يكن السيرفر يعمل وكان الرابط محلياً، يتم تشغيله تلقائياً في الخلفية بدون أي نوافذ سوداء!
         try
         {
             var appDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -83,7 +167,6 @@ public class ClinicApiClient
 
             if (!File.Exists(serverExePath))
             {
-                // مسار التطوير الاحتياطي
                 var fallback = Path.GetFullPath(Path.Combine(appDir, "..", "..", "..", "..", "SeddikClinic_WindowsApp", "Server", "SeddikClinic.Api.exe"));
                 if (File.Exists(fallback)) serverExePath = fallback;
             }
@@ -102,13 +185,12 @@ public class ClinicApiClient
 
                 Process.Start(psi);
 
-                // الانتظار حتى يستيقظ السيرفر
                 for (int i = 0; i < 15; i++)
                 {
                     await Task.Delay(500);
                     if (await IsServerRespondingAsync("http://localhost:5000"))
                     {
-                        _activeBaseUrl = "http://localhost:5000";
+                        SaveServerUrl("http://localhost:5000");
                         return true;
                     }
                 }
@@ -116,7 +198,7 @@ public class ClinicApiClient
         }
         catch
         {
-            // تجاهل الخطأ والمحاولة عبر الرابط المتاح
+            // fallback
         }
 
         return false;
@@ -318,11 +400,12 @@ public class ClinicApiClient
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<bool> UpdateAppointmentFinancialsAsync(Guid appointmentId, decimal? totalFees, decimal? depositAmount, bool? isDepositPaid)
+    public async Task<bool> UpdateAppointmentFinancialsAsync(Guid appointmentId, decimal? totalFees, decimal? depositAmount, bool? isDepositPaid, decimal? discountAmount = null)
     {
         var response = await _httpClient.PutAsJsonAsync($"{_activeBaseUrl}/api/appointments/{appointmentId}/financials", new
         {
             TotalFees = totalFees,
+            DiscountAmount = discountAmount,
             DepositAmount = depositAmount,
             IsDepositPaid = isDepositPaid
         }, JsonOptions);
@@ -556,5 +639,110 @@ public class ClinicApiClient
         {
             return false;
         }
+    }
+
+    // ==========================================
+    // 🦷 خريطة الأسنان والأشعة (Dental Charting & Imaging)
+    // ==========================================
+
+    public async Task<PatientDentalChartSummaryDto?> GetPatientDentalChartAsync(Guid patientId)
+    {
+        return await ExecuteWithRetryAsync<PatientDentalChartSummaryDto>(() => _httpClient.GetAsync($"{_activeBaseUrl}/api/dentalchart/patient/{patientId}"));
+    }
+
+    public async Task<DentalToothRecordDto?> UpdateToothRecordAsync(UpdateToothRecordDto dto)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/dentalchart/tooth", dto, JsonOptions);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<DentalToothRecordDto>(JsonOptions);
+        }
+        return null;
+    }
+
+    public async Task<bool> ResetPatientTeethAsync(Guid patientId)
+    {
+        var response = await _httpClient.DeleteAsync($"{_activeBaseUrl}/api/dentalchart/patient/{patientId}/reset");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<List<PatientDentalImageDto>> GetPatientImagesAsync(Guid patientId, SeddikClinic.Core.Entities.Appointments.DentalImageType? type = null)
+    {
+        var url = $"{_activeBaseUrl}/api/dentalchart/patient/{patientId}/images";
+        if (type.HasValue) url += $"?type={(int)type.Value}";
+        var result = await ExecuteWithRetryAsync<List<PatientDentalImageDto>>(() => _httpClient.GetAsync(url));
+        return result ?? new List<PatientDentalImageDto>();
+    }
+
+    public async Task<PatientDentalImageDto?> AddPatientImageAsync(CreateDentalImageDto dto)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/dentalchart/images", dto, JsonOptions);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<PatientDentalImageDto>(JsonOptions);
+        }
+        return null;
+    }
+
+    public async Task<bool> DeletePatientImageAsync(Guid imageId)
+    {
+        var response = await _httpClient.DeleteAsync($"{_activeBaseUrl}/api/dentalchart/images/{imageId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    // ==========================================
+    // 💊 الروشتة الإلكترونية والأدوية (Prescriptions)
+    // ==========================================
+
+    public async Task<List<PrescriptionDto>> GetPatientPrescriptionsAsync(Guid patientId)
+    {
+        var result = await ExecuteWithRetryAsync<List<PrescriptionDto>>(() => _httpClient.GetAsync($"{_activeBaseUrl}/api/prescriptions/patient/{patientId}"));
+        return result ?? new List<PrescriptionDto>();
+    }
+
+    public async Task<PrescriptionDto?> GetPrescriptionByIdAsync(Guid id)
+    {
+        return await ExecuteWithRetryAsync<PrescriptionDto>(() => _httpClient.GetAsync($"{_activeBaseUrl}/api/prescriptions/{id}"));
+    }
+
+    public async Task<PrescriptionDto?> CreatePrescriptionAsync(CreatePrescriptionDto dto)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/prescriptions", dto, JsonOptions);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<PrescriptionDto>(JsonOptions);
+        }
+        return null;
+    }
+
+    public async Task<bool> DeletePrescriptionAsync(Guid id)
+    {
+        var response = await _httpClient.DeleteAsync($"{_activeBaseUrl}/api/prescriptions/{id}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<List<DentalDrugCatalogItemDto>> GetCommonDentalDrugsCatalogAsync()
+    {
+        var result = await ExecuteWithRetryAsync<List<DentalDrugCatalogItemDto>>(() => _httpClient.GetAsync($"{_activeBaseUrl}/api/prescriptions/drugs-catalog"));
+        return result ?? new List<DentalDrugCatalogItemDto>();
+    }
+
+    // ==========================================
+    // 📊 تحليلات العيادة ومساعد الذكاء الاصطناعي (Analytics & AI)
+    // ==========================================
+
+    public async Task<SeddikClinic.Core.DTOs.Financial.ClinicAnalyticsOverviewDto?> GetClinicAnalyticsOverviewAsync(int monthsBack = 6)
+    {
+        return await ExecuteWithRetryAsync<SeddikClinic.Core.DTOs.Financial.ClinicAnalyticsOverviewDto>(() => _httpClient.GetAsync($"{_activeBaseUrl}/api/analytics/overview?monthsBack={monthsBack}"));
+    }
+
+    public async Task<SeddikClinic.Core.DTOs.Financial.PatientAiDiagnosisResultDto?> GetAiDiagnosisAsync(SeddikClinic.Core.DTOs.Financial.PatientAiDiagnosisRequestDto request)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{_activeBaseUrl}/api/analytics/ai-diagnosis", request, JsonOptions);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<SeddikClinic.Core.DTOs.Financial.PatientAiDiagnosisResultDto>(JsonOptions);
+        }
+        return null;
     }
 }

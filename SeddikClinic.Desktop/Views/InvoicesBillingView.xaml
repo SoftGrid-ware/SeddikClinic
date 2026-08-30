@@ -25,8 +25,8 @@
                         <TextBlock Text="🧾" FontSize="18"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="إدارة حالات التقسيط والتحصيل" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
-                        <TextBlock Text="متابعة حالات التقسيط للمرضى، تحصيل الأقساط، العربون، وتسوية الذمم المالية" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
+                        <TextBlock Text="إدارة الفواتير وحالات التقسيط والتحصيل" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="متابعة كافة الفواتير والتحصيلات للمرضى، دفعات التقسيط، السداد الكاش، وتسوية الذمم المالية" FontSize="12" Foreground="#64748B" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -46,7 +46,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="إجمالي المحصل من الأقساط" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                        <TextBlock Text="إجمالي المحصل من الفواتير والتقسيط" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
                         <TextBlock x:Name="KpiCollectedText" Text="0.00 ج.م" FontSize="18" FontWeight="Bold" Foreground="#15803D" Margin="0,4,0,0"/>
                     </StackPanel>
                     <Border Grid.Column="1" Background="#F0FDF4" CornerRadius="10" Width="40" Height="40">
@@ -97,8 +97,8 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="إجمالي حالات التقسيط" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="KpiInvoicesCountText" Text="0 حالة تقسيط" FontSize="18" FontWeight="Bold" Foreground="#0284C7" Margin="0,4,0,0"/>
+                        <TextBlock Text="إجمالي الفواتير والحالات" FontSize="12" Foreground="#64748B" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="KpiInvoicesCountText" Text="0 فاتورة" FontSize="18" FontWeight="Bold" Foreground="#0284C7" Margin="0,4,0,0"/>
                     </StackPanel>
                     <Border Grid.Column="1" Background="#EFF6FF" CornerRadius="10" Width="40" Height="40">
                         <TextBlock Text="📑" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -114,11 +114,11 @@
                 <TextBox x:Name="SearchBox" Width="200" Height="36" Style="{StaticResource ModernTextBox}" Margin="0,0,10,6" VerticalAlignment="Center" TextChanged="SearchBox_TextChanged" ToolTip="بحث باسم المريض أو رقم الهاتف أو رقم الكشف"/>
 
                 <!-- Status Filter -->
-                <ComboBox x:Name="PaymentStatusFilterCombo" Width="180" Height="36" Background="#F8FAFC" SelectionChanged="FilterStatus_Changed" Margin="0,0,10,6" VerticalAlignment="Center" SelectedIndex="0">
-                    <ComboBoxItem Content="كافة حالات التقسيط (الافتراضي)"/>
-                    <ComboBoxItem Content="متبقي أقساط وذمم جارية ⏳"/>
-                    <ComboBoxItem Content="أقساط مسددة بالكامل ✅"/>
-                    <ComboBoxItem Content="عرض كافة الحجوزات والفواتير 📑"/>
+                <ComboBox x:Name="PaymentStatusFilterCombo" Width="220" Height="36" Background="#F8FAFC" SelectionChanged="FilterStatus_Changed" Margin="0,0,10,6" VerticalAlignment="Center" SelectedIndex="0">
+                    <ComboBoxItem Content="كافة الفواتير والتحصيلات (الكل)"/>
+                    <ComboBoxItem Content="حالات التقسيط والذمم الجارية ⏳"/>
+                    <ComboBoxItem Content="فواتير مسددة بالكامل ✅"/>
+                    <ComboBoxItem Content="فواتير غير مسددة بالكامل ❌"/>
                 </ComboBox>
 
                 <!-- Date Range Box (من تاريخ و إلى تاريخ) -->
@@ -232,7 +232,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="💵 تحصيل قسط" Click="CollectPayment_Click" ToolTip="تحصيل دفعة أو قسط وتسجيل السداد فوراً" Background="#DCFCE7" Foreground="#15803D" FontWeight="Bold" BorderThickness="0" Padding="8,4" Height="30" Margin="0,0,6,0" Cursor="Hand">
+                                    <Button Content="💵 تحصيل" Click="CollectPayment_Click" ToolTip="تحصيل المبلغ أو القسط وتسجيل السداد فوراً" Background="#DCFCE7" Foreground="#15803D" FontWeight="Bold" BorderThickness="0" Padding="12,4" Height="30" Margin="0,0,6,0" Cursor="Hand">
                                         <Button.Resources>
                                             <Style TargetType="Border">
                                                 <Setter Property="CornerRadius" Value="6"/>
@@ -302,8 +302,29 @@
                         </UniformGrid>
                     </Border>
 
-                    <TextBlock Text="المبلغ المراد تحصيله الآن (ج.م):" FontSize="13" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <TextBox x:Name="ModalPaymentAmountInput" Height="40" Style="{StaticResource ModernTextBox}" FontWeight="Bold" FontSize="14" Foreground="#15803D" Margin="0,0,0,14"/>
+                    <!-- Quick Actions Buttons for Payment -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="🔄 تصفير المحصل (0 ج.م)" Click="ZeroCollection_Click" Background="#FEF2F2" Foreground="#DC2626" BorderBrush="#FECACA" BorderThickness="1" FontWeight="Bold" Height="34" Margin="0,0,6,0" Cursor="Hand" ToolTip="إعادة المبلغ المحصل للصفر وتعديل المتبقي للإجمالي كاملاً">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                        <Button Grid.Column="1" Content="💵 سداد كامل المتبقي" Click="FullPayment_Click" Background="#F0FDF4" Foreground="#15803D" BorderBrush="#BBF7D0" BorderThickness="1" FontWeight="Bold" Height="34" Margin="6,0,0,0" Cursor="Hand" ToolTip="سداد كامل المبلغ المتبقي على المريض">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="المبلغ المراد سداده / تعيينه (ج.م):" FontSize="13" Foreground="#0F172A" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <CheckBox x:Name="SetDirectCollectionCheck" Grid.Column="1" Content="تعيين كإجمالي محصل مباشر" FontWeight="SemiBold" FontSize="12" Foreground="#0284C7" VerticalAlignment="Center" ToolTip="عند التحديد، سيتم استبدال إجمالي المبلغ المحصل بالقيمة المدخلة مباشرة (مثال: 0 ج.م)"/>
+                    </Grid>
+                    <TextBox x:Name="ModalPaymentAmountInput" Height="40" Style="{StaticResource ModernTextBox}" FontWeight="Bold" FontSize="15" Foreground="#15803D" Margin="0,0,0,14" TextChanged="ModalPaymentAmountInput_TextChanged"/>
 
                     <TextBlock Text="طريقة الدفع:" FontSize="13" Foreground="#0F172A" FontWeight="SemiBold" Margin="0,0,0,6"/>
                     <ComboBox x:Name="ModalPaymentMethodCombo" Height="40" SelectedIndex="0" Margin="0,0,0,14">
@@ -317,7 +338,7 @@
                     <TextBox x:Name="ModalNotesInput" Height="40" Style="{StaticResource ModernTextBox}" Margin="0,0,0,20"/>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button Content="تأكيد وتسجيل التحصيل ✅" Click="ConfirmCollectPayment_Click" Height="42" Padding="26,0" Background="#10B981" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
+                        <Button Content="تأكيد وحفظ التحصيل ✅" Click="ConfirmCollectPayment_Click" Height="42" Padding="26,0" Background="#10B981" Foreground="White" FontWeight="Bold" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
                         <Button Content="إلغاء ✖" Click="CloseCollectPaymentModal_Click" Height="42" Style="{StaticResource OutlineButtonStyle}"/>
                     </StackPanel>
                 </StackPanel>
